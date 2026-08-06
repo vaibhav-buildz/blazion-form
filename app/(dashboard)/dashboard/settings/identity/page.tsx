@@ -23,6 +23,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -256,7 +257,7 @@ export default function IdentitySettingsPage() {
               <fieldset disabled={loading} className="space-y-6">
                 {/* Logo Upload Section */}
                 <div className="space-y-3">
-                  <FormLabel>Organisation Logo</FormLabel>
+                  <Label>Organisation Logo</Label>
 
                   {logoUrl ? (
                     <div className="flex items-center gap-4">
