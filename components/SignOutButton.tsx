@@ -2,11 +2,12 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 
 export function SignOutButton() {
   const router = useRouter()
+  const supabase = createClient()
   const [loading, setLoading] = React.useState(false)
 
   async function handleSignOut() {
@@ -14,6 +15,7 @@ export function SignOutButton() {
     try {
       await supabase.auth.signOut()
       router.push("/login")
+      router.refresh()
     } catch (error) {
       console.error("Error signing out:", error)
     } finally {

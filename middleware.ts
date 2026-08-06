@@ -8,6 +8,13 @@ export async function middleware(request: NextRequest) {
     },
   })
 
+  const pathname = request.nextUrl.pathname
+
+  // Allow auth callback to pass through without session check
+  if (pathname.startsWith("/auth/callback")) {
+    return response
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -35,8 +42,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const pathname = request.nextUrl.pathname
-
   if (pathname.startsWith("/dashboard") && !user) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
@@ -53,5 +58,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/login", "/signup"],
+  matcher: ["/dashboard/:path*", "/login", "/signup", "/auth/callback"],
 }

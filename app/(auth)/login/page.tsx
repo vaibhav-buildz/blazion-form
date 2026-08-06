@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 import { loginSchema, type LoginInput } from "@/lib/validations/auth"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,8 +27,29 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 
+function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  )
+}
+
 export default function LoginPage() {
   const router = useRouter()
+  const supabase = createClient()
   const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(false)
 
@@ -39,6 +60,16 @@ export default function LoginPage() {
       password: "",
     },
   })
+
+  const handleGitHubLogin = async () => {
+    const supabaseClient = createClient()
+    await supabaseClient.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+  }
 
   async function onSubmit(data: LoginInput) {
     setError(null)
@@ -51,13 +82,16 @@ export default function LoginPage() {
       })
 
       if (authError) {
+        console.error("Supabase login error:", authError)
         setError(authError.message)
         return
       }
 
       router.push("/dashboard")
+      router.refresh()
     } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred.")
+      console.error("Unhandled login exception:", err)
+      setError(err?.message || "An unexpected error occurred during login.")
     } finally {
       setLoading(false)
     }
@@ -72,7 +106,23 @@ export default function LoginPage() {
             Enter your email and password to access your account
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full flex items-center justify-center gap-2"
+            onClick={handleGitHubLogin}
+          >
+            <GithubIcon className="h-4 w-4" />
+            Continue with GitHub
+          </Button>
+
+          <div className="relative flex items-center justify-center border-t py-2">
+            <span className="bg-background px-2 text-xs font-medium text-slate-500 uppercase">
+              Or continue with email
+            </span>
+          </div>
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
@@ -85,6 +135,7 @@ export default function LoginPage() {
                       <Input
                         type="email"
                         placeholder="name@example.com"
+                        disabled={loading}
                         {...field}
                       />
                     </FormControl>
@@ -103,6 +154,7 @@ export default function LoginPage() {
                       <Input
                         type="password"
                         placeholder="••••••••"
+                        disabled={loading}
                         {...field}
                       />
                     </FormControl>
@@ -118,7 +170,9 @@ export default function LoginPage() {
           </Form>
 
           {error && (
-            <p className="mt-4 text-sm font-medium text-destructive">{error}</p>
+            <div className="rounded-md bg-destructive/10 p-3 text-sm font-medium text-destructive">
+              {error}
+            </div>
           )}
         </CardContent>
         <CardFooter className="justify-center border-t p-4">

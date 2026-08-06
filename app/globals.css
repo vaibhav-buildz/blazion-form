@@ -1,8 +1,79 @@
 @import "tailwindcss";
 
 @layer base {
+  :root {
+    --background: #FAFAF5;
+    --foreground: #2D3319;
+
+    --card: #FFFFFF;
+    --card-foreground: #2D3319;
+
+    --popover: #FFFFFF;
+    --popover-foreground: #2D3319;
+
+    --primary: #4A5D23;
+    --primary-foreground: #FFFFFF;
+
+    --secondary: #A9B388;
+    --secondary-foreground: #2D3319;
+
+    --muted: #F3F4EE;
+    --muted-foreground: #6B7355;
+
+    --accent: #A9B388;
+    --accent-foreground: #2D3319;
+
+    --destructive: #dc2626;
+    --destructive-foreground: #FFFFFF;
+
+    --border: #D4D8C4;
+    --input: #D4D8C4;
+    --ring: #4A5D23;
+
+    --radius: 0.5rem;
+  }
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
   body {
-    @apply antialiased text-slate-900 bg-slate-50 dark:bg-slate-950 dark:text-slate-100;
+    @apply bg-background text-foreground antialiased;
   }
 }
 
@@ -17,10 +88,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(107, 115, 85, 0.3);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.6);
+  background: rgba(74, 93, 35, 0.5);
 }
