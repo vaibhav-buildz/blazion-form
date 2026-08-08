@@ -1,3 +1,10 @@
+/*
+ * COLOR SYSTEM RULE: Never use raw Tailwind color classes (slate, gray, zinc, etc.)
+ * anywhere in this codebase. Always use the semantic theme classes below
+ * (text-foreground, bg-card, border-border, text-muted-foreground, bg-primary, etc.)
+ * so the entire app stays visually consistent and themeable from one place.
+ */
+
 @import "tailwindcss";
 
 @layer base {
@@ -17,13 +24,13 @@
     --secondary: #A9B388;
     --secondary-foreground: #2D3319;
 
-    --muted: #F3F4EE;
+    --muted: #F0F0E8;
     --muted-foreground: #6B7355;
 
     --accent: #A9B388;
     --accent-foreground: #2D3319;
 
-    --destructive: #dc2626;
+    --destructive: #B33A3A;
     --destructive-foreground: #FFFFFF;
 
     --border: #D4D8C4;
