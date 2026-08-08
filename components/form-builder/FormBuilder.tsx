@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
+import { QuestionCard, type Question } from "./QuestionCard"
 
 interface FormBuilderProps {
   form: {
@@ -27,6 +28,54 @@ const QUESTION_TYPES = [
 
 export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
   const [title, setTitle] = React.useState(form.title || "Untitled Form")
+  const [questions, setQuestions] = React.useState<Question[]>(initialQuestions)
+  const [selectedQuestionId, setSelectedQuestionId] = React.useState<string | null>(null)
+
+  const handleAddQuestion = async (typeId: string) => {
+    const isOptionsType = ["multiple_choice", "checkbox", "dropdown"].includes(typeId)
+    const newQuestion: Question = {
+      id: crypto.randomUUID(),
+      type: typeId,
+      title: "Untitled Question",
+      description: "",
+      required: false,
+      position: questions.length,
+      options: isOptionsType ? ["Option 1", "Option 2"] : [],
+      settings: {}
+    }
+
+    setQuestions((prev) => [...prev, newQuestion])
+    setSelectedQuestionId(newQuestion.id)
+
+    try {
+      await fetch("/api/questions/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ form_id: form.id, ...newQuestion }),
+      })
+    } catch (error) {
+      console.error("Failed to persist question", error)
+    }
+  }
+
+  const handleUpdateQuestion = (id: string, updates: Partial<Question>) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, ...updates } : q))
+    )
+  }
+
+  const handleDeleteQuestion = async (id: string) => {
+    setQuestions((prev) => prev.filter((q) => q.id !== id))
+    if (selectedQuestionId === id) setSelectedQuestionId(null)
+
+    try {
+      await fetch(`/api/questions/${id}`, { method: "DELETE" })
+    } catch (error) {
+      console.error("Failed to delete question", error)
+    }
+  }
+
+  const selectedQuestion = questions.find((q) => q.id === selectedQuestionId)
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
@@ -71,6 +120,7 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
                   key={type.id}
                   variant="outline"
                   className="w-full justify-start text-left font-normal"
+                  onClick={() => handleAddQuestion(type.id)}
                 >
                   {type.label}
                 </Button>
@@ -91,7 +141,7 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
               />
             </Card>
 
-            {initialQuestions.length === 0 ? (
+            {questions.length === 0 ? (
               <div className="rounded-lg border-2 border-dashed border-border p-12 text-center bg-card">
                 <p className="text-sm text-muted-foreground">
                   No questions yet. Add one from the left panel.
@@ -99,7 +149,16 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
               </div>
             ) : (
               <div className="space-y-4">
-                {/* Render questions list here when implemented */}
+                {questions.map((question) => (
+                  <QuestionCard
+                    key={question.id}
+                    question={question}
+                    isSelected={selectedQuestionId === question.id}
+                    onSelect={setSelectedQuestionId}
+                    onUpdate={handleUpdateQuestion}
+                    onDelete={handleDeleteQuestion}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -107,11 +166,17 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
 
         {/* Right Sidebar: Settings / Inspector */}
         <aside className="w-72 border-l border-border bg-card p-6 shrink-0 overflow-y-auto">
-          <div className="flex h-full items-center justify-center text-center">
-            <p className="text-sm text-muted-foreground">
-              Select a question to edit its settings
-            </p>
-          </div>
+          {selectedQuestion ? (
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Editing: {selectedQuestion.title}</h3>
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center text-center">
+              <p className="text-sm text-muted-foreground">
+                Select a question to edit its settings
+              </p>
+            </div>
+          )}
         </aside>
       </div>
     </div>
