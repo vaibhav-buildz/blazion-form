@@ -105,22 +105,23 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
       )
       await Promise.all(flushPromises)
 
-      const newSlug = nanoid(10)
+      const slugToSave = form.slug || slug || nanoid(10)
       const titleToSave = title.trim() || "Untitled Form"
       const res = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "published", slug: newSlug, title: titleToSave }),
+        body: JSON.stringify({ status: "published", slug: slugToSave, title: titleToSave }),
       })
       if (res.ok) {
         setStatus("published")
-        setSlug(newSlug)
+        setSlug(slugToSave)
         if (typeof window !== "undefined") {
-          setPublicUrl(`${window.location.origin}/f/${newSlug}`)
+          setPublicUrl(`${window.location.origin}/f/${slugToSave}`)
         }
       } else {
         console.error("Failed to publish form")
       }
+
     } catch (err) {
       console.error("Error publishing form", err)
     } finally {
