@@ -4,9 +4,9 @@ import { NextResponse } from "next/server"
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { slug } = await params
+  const { id } = await params
   const cookieStore = await cookies()
 
   const supabase = createServerClient(
@@ -29,11 +29,11 @@ export async function POST(
   )
 
   try {
-    // Lookup published form by slug
+    // Lookup published form by slug or id
     const { data: form, error: formError } = await supabase
       .from("forms")
       .select("id, status")
-      .eq("slug", slug)
+      .or(`id.eq.${id},slug.eq.${id}`)
       .eq("status", "published")
       .single()
 

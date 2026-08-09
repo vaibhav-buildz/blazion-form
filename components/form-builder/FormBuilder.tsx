@@ -2,6 +2,8 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { nanoid } from "nanoid"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
@@ -42,19 +44,25 @@ const QUESTION_TYPES = [
 ]
 
 export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
-  const [title, setTitle] = React.useState(form.title || "Untitled Form")
+  const router = useRouter()
+  const [title, setTitle] = React.useState(
+    form.title === "Untitled Form" ? "" : form.title || ""
+  )
   const [status, setStatus] = React.useState<string>(form.status || "draft")
+  const [slug, setSlug] = React.useState<string>(form.slug)
   const [questions, setQuestions] = React.useState<Question[]>(initialQuestions)
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<string | null>(null)
   const [isPublishing, setIsPublishing] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
   const [publicUrl, setPublicUrl] = React.useState("")
 
+  const isLocked = status === "published"
+
   React.useEffect(() => {
     if (typeof window !== "undefined") {
-      setPublicUrl(`${window.location.origin}/f/${form.slug}`)
+      setPublicUrl(`${window.location.origin}/f/${slug}`)
     }
-  }, [form.slug])
+  }, [slug])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -64,21 +72,59 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
     })
   )
 
+  const handleTitleChange = (val: string) => {
+    if (isLocked) return
+    setTitle(val)
+    const titleToSave = val.trim() || "Untitled Form"
+    fetch(`/api/forms/${form.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: titleToSave }),
+    }).catch((err) => console.error("Failed to update form title", err))
+  }
+
   const handlePublish = async () => {
     setIsPublishing(true)
     try {
+      const newSlug = nanoid(10)
+      const titleToSave = title.trim() || "Untitled Form"
       const res = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "published" }),
+        body: JSON.stringify({ status: "published", slug: newSlug, title: titleToSave }),
       })
       if (res.ok) {
         setStatus("published")
+        setSlug(newSlug)
+        if (typeof window !== "undefined") {
+          setPublicUrl(`${window.location.origin}/f/${newSlug}`)
+        }
       } else {
         console.error("Failed to publish form")
       }
     } catch (err) {
       console.error("Error publishing form", err)
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  const handleUnpublish = async () => {
+    setIsPublishing(true)
+    try {
+      const res = await fetch(`/api/forms/${form.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "draft" }),
+      })
+      if (res.ok) {
+        setStatus("draft")
+        router.refresh()
+      } else {
+        console.error("Failed to unpublish form")
+      }
+    } catch (err) {
+      console.error("Error unpublishing form", err)
     } finally {
       setIsPublishing(false)
     }
@@ -93,11 +139,12 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
   }
 
   const handleAddQuestion = async (typeId: string) => {
+    if (isLocked) return
     const isOptionsType = ["multiple_choice", "checkbox", "dropdown"].includes(typeId)
     const newQuestion: Question = {
       id: crypto.randomUUID(),
       type: typeId,
-      title: "Untitled Question",
+      title: "",
       description: "",
       required: false,
       position: questions.length,
@@ -112,20 +159,60 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
       await fetch("/api/questions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ form_id: form.id, ...newQuestion }),
+        body: JSON.stringify({
+          form_id: form.id,
+          ...newQuestion,
+          title: "Untitled Question",
+        }),
       })
     } catch (error) {
       console.error("Failed to persist question", error)
     }
   }
 
+  const pendingQuestionUpdates = React.useRef<Record<string, Partial<Question>>>({})
+  const questionTimeouts = React.useRef<Record<string, NodeJS.Timeout>>({})
+
   const handleUpdateQuestion = (id: string, updates: Partial<Question>) => {
+    if (isLocked) return
     setQuestions((prev) =>
       prev.map((q) => (q.id === id ? { ...q, ...updates } : q))
     )
+
+    pendingQuestionUpdates.current[id] = {
+      ...(pendingQuestionUpdates.current[id] || {}),
+      ...updates,
+    }
+
+    if (questionTimeouts.current[id]) {
+      clearTimeout(questionTimeouts.current[id])
+    }
+
+    questionTimeouts.current[id] = setTimeout(async () => {
+      const payload = pendingQuestionUpdates.current[id]
+      if (!payload) return
+      delete pendingQuestionUpdates.current[id]
+
+      const finalPayload = { ...payload }
+      if (typeof finalPayload.title === "string") {
+        finalPayload.title = finalPayload.title.trim() || "Untitled Question"
+      }
+
+      try {
+        await fetch(`/api/questions/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(finalPayload),
+        })
+      } catch (err) {
+        console.error("Failed to persist question update", err)
+      }
+    }, 400)
   }
 
+
   const handleDeleteQuestion = async (id: string) => {
+    if (isLocked) return
     setQuestions((prev) => prev.filter((q) => q.id !== id))
     if (selectedQuestionId === id) setSelectedQuestionId(null)
 
@@ -137,6 +224,7 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
   }
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (isLocked) return
     const { active, over } = event
     if (over && active.id !== over.id) {
       setQuestions((items) => {
@@ -179,30 +267,38 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
 
         <div className="w-1/3 max-w-md">
           <Input
+            disabled={isLocked}
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="text-center font-semibold text-lg border-transparent hover:border-border focus:border-border"
-            placeholder="Form Title"
+            onChange={(e) => handleTitleChange(e.target.value)}
+            className="text-center font-semibold text-lg border-transparent hover:border-border focus:border-border disabled:opacity-100"
+            placeholder="Untitled Form"
           />
         </div>
 
         <div>
-          <Button
-            variant={status === "published" ? "outline" : "default"}
-            disabled={isPublishing}
-            onClick={handlePublish}
-            className={
-              status === "published"
-                ? "text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 dark:text-emerald-400"
-                : ""
-            }
-          >
-            {isPublishing
-              ? "Publishing..."
-              : status === "published"
-              ? "Published ✓"
-              : "Publish"}
-          </Button>
+          {isLocked ? (
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground font-medium hidden md:inline">
+                This form is published and locked.
+              </span>
+              <Button
+                variant="outline"
+                disabled={isPublishing}
+                onClick={handleUnpublish}
+                className="border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-xs shrink-0"
+              >
+                {isPublishing ? "Updating..." : "Unpublish to Edit"}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="default"
+              disabled={isPublishing}
+              onClick={handlePublish}
+            >
+              {isPublishing ? "Publishing..." : "Publish"}
+            </Button>
+          )}
         </div>
       </header>
 
@@ -245,23 +341,26 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar: Question Types */}
         <aside className="w-64 border-r border-border bg-card p-4 space-y-4 shrink-0 overflow-y-auto">
-          <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-              Question Types
-            </h3>
-            <div className="space-y-2">
-              {QUESTION_TYPES.map((type) => (
-                <Button
-                  key={type.id}
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                  onClick={() => handleAddQuestion(type.id)}
-                >
-                  {type.label}
-                </Button>
-              ))}
+          <fieldset disabled={isLocked} className="space-y-4">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                Question Types
+              </h3>
+              <div className="space-y-2">
+                {QUESTION_TYPES.map((type) => (
+                  <Button
+                    key={type.id}
+                    variant="outline"
+                    disabled={isLocked}
+                    className="w-full justify-start text-left font-normal"
+                    onClick={() => handleAddQuestion(type.id)}
+                  >
+                    {type.label}
+                  </Button>
+                ))}
+              </div>
             </div>
-          </div>
+          </fieldset>
         </aside>
 
         {/* Center Canvas */}
@@ -269,9 +368,10 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
           <div className="mx-auto max-w-2xl space-y-6">
             <Card className="p-6">
               <Input
+                disabled={isLocked}
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="text-2xl font-bold border-none shadow-none focus-visible:ring-0 px-0"
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="text-2xl font-bold border-none shadow-none focus-visible:ring-0 px-0 disabled:opacity-100"
                 placeholder="Untitled Form"
               />
             </Card>
@@ -297,6 +397,7 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
                       <QuestionCard
                         key={question.id}
                         question={question}
+                        disabled={isLocked}
                         isSelected={selectedQuestionId === question.id}
                         onSelect={setSelectedQuestionId}
                         onUpdate={handleUpdateQuestion}
@@ -315,6 +416,7 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
           {selectedQuestion ? (
             <QuestionSettings 
               question={selectedQuestion} 
+              disabled={isLocked}
               onUpdate={handleUpdateQuestion} 
             />
           ) : (
@@ -329,5 +431,6 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
     </div>
   )
 }
+
 
 

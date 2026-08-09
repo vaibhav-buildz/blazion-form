@@ -114,7 +114,8 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
             <Card key={question.id} className="p-6 border-border shadow-sm space-y-4">
               <div>
                 <Label className="text-base font-semibold text-foreground flex items-center gap-1">
-                  <span>{question.title}</span>
+                  <span>{question.title || "Untitled Question"}</span>
+
                   {question.required && (
                     <span className="text-destructive font-bold" title="Required">
                       *
