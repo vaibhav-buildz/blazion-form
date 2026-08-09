@@ -7,6 +7,20 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { QuestionCard, type Question } from "./QuestionCard"
 import { QuestionSettings } from "./QuestionSettings"
+import { Copy, Check } from "lucide-react"
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core"
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable"
 
 interface FormBuilderProps {
   form: {
@@ -29,8 +43,54 @@ const QUESTION_TYPES = [
 
 export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
   const [title, setTitle] = React.useState(form.title || "Untitled Form")
+  const [status, setStatus] = React.useState<string>(form.status || "draft")
   const [questions, setQuestions] = React.useState<Question[]>(initialQuestions)
   const [selectedQuestionId, setSelectedQuestionId] = React.useState<string | null>(null)
+  const [isPublishing, setIsPublishing] = React.useState(false)
+  const [copied, setCopied] = React.useState(false)
+  const [publicUrl, setPublicUrl] = React.useState("")
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setPublicUrl(`${window.location.origin}/f/${form.slug}`)
+    }
+  }, [form.slug])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  )
+
+  const handlePublish = async () => {
+    setIsPublishing(true)
+    try {
+      const res = await fetch(`/api/forms/${form.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "published" }),
+      })
+      if (res.ok) {
+        setStatus("published")
+      } else {
+        console.error("Failed to publish form")
+      }
+    } catch (err) {
+      console.error("Error publishing form", err)
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  const handleCopyLink = () => {
+    if (publicUrl) {
+      navigator.clipboard.writeText(publicUrl)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
 
   const handleAddQuestion = async (typeId: string) => {
     const isOptionsType = ["multiple_choice", "checkbox", "dropdown"].includes(typeId)
@@ -76,6 +136,32 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
     }
   }
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setQuestions((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
+        const reordered = arrayMove(items, oldIndex, newIndex).map((q, idx) => ({
+          ...q,
+          position: idx,
+        }))
+
+        // Persist new order to backend API
+        fetch("/api/questions/reorder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            formId: form.id,
+            orderedIds: reordered.map((q) => q.id),
+          }),
+        }).catch((error) => console.error("Failed to reorder questions", error))
+
+        return reordered
+      })
+    }
+  }
+
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId)
 
   return (
@@ -101,11 +187,59 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
         </div>
 
         <div>
-          <Button disabled variant="default">
-            Publish
+          <Button
+            variant={status === "published" ? "outline" : "default"}
+            disabled={isPublishing}
+            onClick={handlePublish}
+            className={
+              status === "published"
+                ? "text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 dark:text-emerald-400"
+                : ""
+            }
+          >
+            {isPublishing
+              ? "Publishing..."
+              : status === "published"
+              ? "Published ✓"
+              : "Publish"}
           </Button>
         </div>
       </header>
+
+      {/* Public URL Bar when Published */}
+      {status === "published" && (
+        <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-6 py-2 flex items-center justify-between gap-4 text-sm shrink-0">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium shrink-0">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            Form is Live
+          </div>
+          <div className="flex items-center gap-2 flex-1 max-w-xl">
+            <Input
+              readOnly
+              value={publicUrl}
+              className="h-8 text-xs font-mono bg-background"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 shrink-0 text-xs gap-1"
+              onClick={handleCopyLink}
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy Link
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Main 3-Column Layout */}
       <div className="flex flex-1 overflow-hidden">
@@ -149,18 +283,29 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {questions.map((question) => (
-                  <QuestionCard
-                    key={question.id}
-                    question={question}
-                    isSelected={selectedQuestionId === question.id}
-                    onSelect={setSelectedQuestionId}
-                    onUpdate={handleUpdateQuestion}
-                    onDelete={handleDeleteQuestion}
-                  />
-                ))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={questions.map((q) => q.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-4">
+                    {questions.map((question) => (
+                      <QuestionCard
+                        key={question.id}
+                        question={question}
+                        isSelected={selectedQuestionId === question.id}
+                        onSelect={setSelectedQuestionId}
+                        onUpdate={handleUpdateQuestion}
+                        onDelete={handleDeleteQuestion}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         </main>
@@ -184,3 +329,5 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
     </div>
   )
 }
+
+
