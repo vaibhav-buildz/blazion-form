@@ -69,6 +69,9 @@ export function QuestionCard({
             <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
               {TYPE_LABELS[question.type] || question.type}
             </span>
+            {question.description && (
+              <p className="mt-2 text-sm text-muted-foreground">{question.description}</p>
+            )}
           </div>
         </div>
 
@@ -115,9 +118,10 @@ export function QuestionCard({
             disabled
             className="bg-muted/50 text-muted-foreground"
             placeholder={
-              question.type === "long_text"
+              question.settings?.placeholder ||
+              (question.type === "long_text"
                 ? "Long text response..."
-                : "Short text response..."
+                : "Short text response...")
             }
           />
         )}

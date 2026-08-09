@@ -80,3 +80,92 @@ export async function DELETE(
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {}
+        },
+      },
+    }
+  )
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  try {
+    const { id } = await params
+    const updates = await req.json()
+
+    // Get the question to find its form_id
+    const { data: question, error: questionError } = await supabase
+      .from("questions")
+      .select("form_id")
+      .eq("id", id)
+      .single()
+
+    if (questionError || !question) {
+      return NextResponse.json({ error: "Question not found" }, { status: 404 })
+    }
+
+    // Verify form belongs to user
+    const { data: form, error: formError } = await supabase
+      .from("forms")
+      .select("user_id")
+      .eq("id", question.form_id)
+      .single()
+
+    if (formError || !form) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 })
+    }
+
+    if (form.user_id !== user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+
+    // Only allow specific fields to be updated
+    const allowedUpdates: any = {}
+    if (updates.title !== undefined) allowedUpdates.title = updates.title
+    if (updates.description !== undefined) allowedUpdates.description = updates.description
+    if (updates.required !== undefined) allowedUpdates.required = updates.required
+    if (updates.options !== undefined) allowedUpdates.options = updates.options
+    if (updates.settings !== undefined) allowedUpdates.settings = updates.settings
+
+    const { data: updatedQuestion, error: updateError } = await supabase
+      .from("questions")
+      .update(allowedUpdates)
+      .eq("id", id)
+      .select()
+      .single()
+
+    if (updateError) {
+      console.error("Error updating question:", updateError)
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    return NextResponse.json(updatedQuestion)
+  } catch (error: any) {
+    console.error("Server error updating question:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}

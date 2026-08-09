@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { QuestionCard, type Question } from "./QuestionCard"
+import { QuestionSettings } from "./QuestionSettings"
 
 interface FormBuilderProps {
   form: {
@@ -167,9 +168,10 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
         {/* Right Sidebar: Settings / Inspector */}
         <aside className="w-72 border-l border-border bg-card p-6 shrink-0 overflow-y-auto">
           {selectedQuestion ? (
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Editing: {selectedQuestion.title}</h3>
-            </div>
+            <QuestionSettings 
+              question={selectedQuestion} 
+              onUpdate={handleUpdateQuestion} 
+            />
           ) : (
             <div className="flex h-full items-center justify-center text-center">
               <p className="text-sm text-muted-foreground">
