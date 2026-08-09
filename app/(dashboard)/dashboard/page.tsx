@@ -39,12 +39,13 @@ export default async function DashboardPage() {
     redirect("/login")
   }
 
-  // Supabase query to fetch user's forms filtering by user_id
+  // Supabase query to fetch user's forms with response count filtering by user_id
   const { data: forms, error } = await supabase
     .from("forms")
-    .select("*")
+    .select("*, responses(count)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
+
 
   if (error) {
     console.error("Error fetching forms for user:", user.id, error)
