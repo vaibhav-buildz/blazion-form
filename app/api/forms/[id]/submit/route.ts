@@ -29,22 +29,34 @@ export async function POST(
   )
 
   try {
-    // Lookup published form by slug or id
-    const { data: form, error: formError } = await supabase
+    console.log("API /api/forms/[id]/submit ROUTE REACHED for param id/slug:", id)
+
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+
+    let formQuery = supabase
       .from("forms")
       .select("id, status")
-      .or(`id.eq.${id},slug.eq.${id}`)
       .eq("status", "published")
-      .single()
+
+    if (isUuid) {
+      formQuery = formQuery.or(`id.eq.${id},slug.eq.${id}`)
+    } else {
+      formQuery = formQuery.eq("slug", id)
+    }
+
+    const { data: form, error: formError } = await formQuery.maybeSingle()
 
     if (formError || !form) {
+      console.error("Form error or not found in submit route:", formError)
       return NextResponse.json(
         { error: "Form not found or not published" },
         { status: 404 }
       )
     }
 
+
     const body = await req.json()
+    console.log("INCOMING SUBMIT BODY:", JSON.stringify(body, null, 2))
     const { answers } = body
 
     if (!answers || typeof answers !== "object") {
@@ -64,17 +76,19 @@ export async function POST(
         },
       ])
       .select()
-      .single()
+      .maybeSingle()
 
     if (insertError) {
-      console.error("Error saving form response:", insertError)
+      console.error("Supabase insert error saving response:", insertError)
       return NextResponse.json(
         { error: insertError.message },
         { status: 500 }
       )
     }
 
+    console.log("SUCCESSFULLY INSERTED RESPONSE:", response)
     return NextResponse.json({ success: true, responseId: response?.id })
+
   } catch (error: any) {
     console.error("Server error submitting form:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })

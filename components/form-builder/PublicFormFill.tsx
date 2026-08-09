@@ -50,6 +50,7 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<Record<string, any>>({
+    mode: "onChange",
     defaultValues: questions.reduce((acc, q) => {
       acc[q.id] = q.type === "checkbox" ? [] : ""
       return acc
@@ -57,17 +58,22 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   })
 
   const onSubmit = async (data: Record<string, any>) => {
+    console.log("SUBMITTING FORM ANSWERS:", data)
     setSubmitError(null)
     try {
+      console.log("POSTing payload to:", `/api/forms/${form.slug}/submit`, { answers: data })
       const res = await fetch(`/api/forms/${form.slug}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers: data }),
       })
 
+      console.log("RESPONSE STATUS:", res.status)
+      const resData = await res.json().catch(() => ({}))
+      console.log("RESPONSE BODY:", resData)
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || "Failed to submit response")
+        throw new Error(resData.error || "Failed to submit response")
       }
 
       setSubmitted(true)
@@ -75,6 +81,10 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
       console.error("Submission error:", err)
       setSubmitError(err.message || "Something went wrong. Please try again.")
     }
+  }
+
+  const onError = (formErrors: any) => {
+    console.log("FORM VALIDATION FAILED ON SUBMIT. ERRORS:", formErrors)
   }
 
   if (submitted) {
@@ -109,7 +119,8 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
         </Card>
 
         {/* Questions Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
+
           {questions.map((question) => (
             <Card key={question.id} className="p-6 border-border shadow-sm space-y-4">
               <div>
@@ -127,16 +138,6 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                     {question.description}
                   </p>
                 )}
-                {question.type === "checkbox" &&
-                  (question.settings?.minSelect || question.settings?.maxSelect) && (
-                    <p className="mt-1 text-xs text-muted-foreground font-medium">
-                      {question.settings?.minSelect && question.settings?.maxSelect
-                        ? `Select ${question.settings.minSelect} to ${question.settings.maxSelect} options`
-                        : question.settings?.minSelect
-                        ? `Select at least ${question.settings.minSelect} options`
-                        : `Select up to ${question.settings.maxSelect} options`}
-                    </p>
-                  )}
               </div>
 
               {/* Input field based on type */}
@@ -150,37 +151,40 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                         case "short_text":
                         case "long_text": {
                           const strVal = typeof value === "string" ? value.trim() : ""
+                          const rawLen = typeof value === "string" ? value.length : 0
+
                           if (question.required && !strVal) {
                             return "This question is required"
                           }
 
-                          const maxChars = question.settings?.maxChars
+                          const minChars =
+                            question.settings?.minChars ??
+                            question.settings?.min_chars
+                          if (
+                            minChars &&
+                            typeof minChars === "number" &&
+                            minChars > 0 &&
+                            rawLen < minChars
+                          ) {
+                            return `Minimum ${minChars} characters required`
+                          }
+
+                          const maxChars =
+                            question.settings?.maxChars ??
+                            question.settings?.maxCharacterCount ??
+                            question.settings?.max_chars
                           if (
                             maxChars &&
                             typeof maxChars === "number" &&
                             maxChars > 0 &&
-                            strVal.length > maxChars
+                            rawLen > maxChars
                           ) {
                             return `Maximum ${maxChars} characters allowed`
                           }
 
-                          if (question.type === "long_text") {
-                            const minWords = question.settings?.minWords
-                            if (
-                              minWords &&
-                              typeof minWords === "number" &&
-                              minWords > 0 &&
-                              strVal
-                            ) {
-                              const wordCount = strVal.split(/\s+/).filter(Boolean).length
-                              if (wordCount < minWords) {
-                                return `Minimum ${minWords} words required`
-                              }
-                            }
-                          }
-
                           return true
                         }
+
 
                         case "multiple_choice":
                         case "dropdown": {
@@ -224,26 +228,95 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
 
                   render={({ field }) => {
                     switch (question.type) {
-                      case "short_text":
-                        return (
-                          <Input
-                            {...field}
-                            value={field.value || ""}
-                            placeholder={question.settings?.placeholder || "Your answer"}
-                            className="w-full"
-                          />
-                        )
+                      case "short_text": {
+                        const maxChars =
+                          question.settings?.maxChars ??
+                          question.settings?.maxCharacterCount ??
+                          question.settings?.max_chars
+                        const val = typeof field.value === "string" ? field.value : ""
+                        const charCount = val.length
+                        const hasMaxChars = typeof maxChars === "number" && maxChars > 0
+                        const isMaxCharsLimit = hasMaxChars && charCount >= maxChars
 
-                      case "long_text":
                         return (
-                          <Textarea
-                            {...field}
-                            value={field.value || ""}
-                            placeholder={question.settings?.placeholder || "Your answer"}
-                            rows={4}
-                            className="w-full resize-y"
-                          />
+                          <div className="space-y-1.5">
+                            <Input
+                              {...field}
+                              value={val}
+                              maxLength={hasMaxChars ? maxChars : undefined}
+                              onChange={(e) => {
+                                let newValue = e.target.value
+                                if (hasMaxChars && newValue.length > maxChars) {
+                                  newValue = newValue.slice(0, maxChars)
+                                }
+                                field.onChange(newValue)
+                              }}
+                              placeholder={question.settings?.placeholder || "Your answer"}
+                              className="w-full"
+                            />
+                            {hasMaxChars && (
+                              <div className="flex justify-end text-xs">
+                                <span
+                                  className={
+                                    isMaxCharsLimit
+                                      ? "text-destructive font-medium"
+                                      : "text-muted-foreground"
+                                  }
+                                >
+                                  {charCount} / {maxChars}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         )
+                      }
+
+                      case "long_text": {
+                        const maxChars =
+                          question.settings?.maxChars ??
+                          question.settings?.maxCharacterCount ??
+                          question.settings?.max_chars
+                        const val = typeof field.value === "string" ? field.value : ""
+                        const charCount = val.length
+                        const hasMaxChars = typeof maxChars === "number" && maxChars > 0
+                        const isMaxCharsLimit = hasMaxChars && charCount >= maxChars
+
+                        return (
+                          <div className="space-y-1.5">
+                            <Textarea
+                              {...field}
+                              value={val}
+                              maxLength={hasMaxChars ? maxChars : undefined}
+                              onChange={(e) => {
+                                let newValue = e.target.value
+                                if (hasMaxChars && newValue.length > maxChars) {
+                                  newValue = newValue.slice(0, maxChars)
+                                }
+                                field.onChange(newValue)
+                              }}
+                              placeholder={question.settings?.placeholder || "Your answer"}
+                              rows={4}
+                              className="w-full resize-y"
+                            />
+                            {hasMaxChars && (
+                              <div className="flex justify-end text-xs">
+                                <span
+                                  className={
+                                    isMaxCharsLimit
+                                      ? "text-destructive font-medium"
+                                      : "text-muted-foreground"
+                                  }
+                                >
+                                  {charCount} / {maxChars}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      }
+
+
+
 
                       case "multiple_choice":
                         return (

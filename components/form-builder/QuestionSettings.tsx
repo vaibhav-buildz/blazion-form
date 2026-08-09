@@ -141,14 +141,14 @@ export function QuestionSettings({
             {question.type === "long_text" && (
               <>
                 <div className="space-y-2">
-                  <Label>Min Word Count</Label>
+                  <Label>Min Character Count</Label>
                   <Input
                     disabled={disabled}
                     type="number"
-                    value={question.settings?.minWords || ""}
+                    value={question.settings?.minChars || ""}
                     onChange={(e) =>
                       handleSettingUpdate(
-                        "minWords",
+                        "minChars",
                         e.target.value ? parseInt(e.target.value) : undefined
                       )
                     }
@@ -172,6 +172,7 @@ export function QuestionSettings({
                 </div>
               </>
             )}
+
           </div>
         )}
 
