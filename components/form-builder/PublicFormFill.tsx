@@ -127,6 +127,16 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                     {question.description}
                   </p>
                 )}
+                {question.type === "checkbox" &&
+                  (question.settings?.minSelect || question.settings?.maxSelect) && (
+                    <p className="mt-1 text-xs text-muted-foreground font-medium">
+                      {question.settings?.minSelect && question.settings?.maxSelect
+                        ? `Select ${question.settings.minSelect} to ${question.settings.maxSelect} options`
+                        : question.settings?.minSelect
+                        ? `Select at least ${question.settings.minSelect} options`
+                        : `Select up to ${question.settings.maxSelect} options`}
+                    </p>
+                  )}
               </div>
 
               {/* Input field based on type */}
@@ -136,23 +146,82 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                   control={control}
                   rules={{
                     validate: (value) => {
-                      if (!question.required) return true
-                      if (question.type === "checkbox") {
-                        const arr = Array.isArray(value) ? value : []
-                        const min = question.settings?.minSelect || 1
-                        if (arr.length < min) {
-                          return min === 1
-                            ? "Please select at least one option"
-                            : `Please select at least ${min} options`
+                      switch (question.type) {
+                        case "short_text":
+                        case "long_text": {
+                          const strVal = typeof value === "string" ? value.trim() : ""
+                          if (question.required && !strVal) {
+                            return "This question is required"
+                          }
+
+                          const maxChars = question.settings?.maxChars
+                          if (
+                            maxChars &&
+                            typeof maxChars === "number" &&
+                            maxChars > 0 &&
+                            strVal.length > maxChars
+                          ) {
+                            return `Maximum ${maxChars} characters allowed`
+                          }
+
+                          if (question.type === "long_text") {
+                            const minWords = question.settings?.minWords
+                            if (
+                              minWords &&
+                              typeof minWords === "number" &&
+                              minWords > 0 &&
+                              strVal
+                            ) {
+                              const wordCount = strVal.split(/\s+/).filter(Boolean).length
+                              if (wordCount < minWords) {
+                                return `Minimum ${minWords} words required`
+                              }
+                            }
+                          }
+
+                          return true
                         }
-                        return true
+
+                        case "multiple_choice":
+                        case "dropdown": {
+                          const strVal = typeof value === "string" ? value.trim() : ""
+                          if (question.required && !strVal) {
+                            return "Please select an option"
+                          }
+                          return true
+                        }
+
+                        case "checkbox": {
+                          const arr = Array.isArray(value) ? value : []
+                          const min = question.settings?.minSelect
+                          const max = question.settings?.maxSelect
+
+                          if (question.required || (min && min > 0)) {
+                            const requiredMin = min && min > 0 ? min : 1
+                            if (arr.length < requiredMin) {
+                              return requiredMin === 1
+                                ? "Please select at least 1 option"
+                                : `Please select at least ${requiredMin} options`
+                            }
+                          }
+
+                          if (max && max > 0 && arr.length > max) {
+                            return `Please select at most ${max} options`
+                          }
+
+                          return true
+                        }
+
+                        default: {
+                          if (question.required && !value) {
+                            return "This question is required"
+                          }
+                          return true
+                        }
                       }
-                      if (!value || (typeof value === "string" && !value.trim())) {
-                        return "This question is required"
-                      }
-                      return true
                     },
                   }}
+
                   render={({ field }) => {
                     switch (question.type) {
                       case "short_text":
@@ -203,43 +272,68 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                           </RadioGroup>
                         )
 
-                      case "checkbox":
+                      case "checkbox": {
                         const currentValues: string[] = Array.isArray(field.value)
                           ? field.value
                           : []
+                        const maxSelect = question.settings?.maxSelect
+                        const isMaxReached =
+                          typeof maxSelect === "number" &&
+                          maxSelect > 0 &&
+                          currentValues.length >= maxSelect
+
                         return (
                           <div className="space-y-2">
                             {question.options?.map((opt, idx) => {
-                              const checked = currentValues.includes(opt)
+                              const isChecked = currentValues.includes(opt)
+                              const isDisabled = !isChecked && isMaxReached
+
                               return (
                                 <div
-                                  key={idx}
+                                  key={`${question.id}-opt-${idx}`}
                                   className="flex items-center space-x-3 rounded-md border border-transparent p-2 hover:bg-accent/40"
                                 >
                                   <Checkbox
-                                    id={`${question.id}-${idx}`}
-                                    checked={checked}
-                                    onCheckedChange={(isChecked) => {
+                                    id={`${question.id}-opt-${idx}`}
+                                    checked={isChecked}
+                                    disabled={isDisabled}
+                                    onCheckedChange={(checkedState) => {
                                       let updated: string[]
-                                      if (isChecked) {
-                                        updated = [...currentValues, opt]
+                                      if (checkedState === true) {
+                                        if (isDisabled) return
+                                        updated = currentValues.includes(opt)
+                                          ? currentValues
+                                          : [...currentValues, opt]
                                       } else {
-                                        updated = currentValues.filter((v) => v !== opt)
+                                        updated = currentValues.filter(
+                                          (v) => v !== opt
+                                        )
                                       }
                                       field.onChange(updated)
                                     }}
                                   />
                                   <Label
-                                    htmlFor={`${question.id}-${idx}`}
-                                    className="text-sm font-normal cursor-pointer flex-1"
+                                    htmlFor={`${question.id}-opt-${idx}`}
+                                    className={`text-sm font-normal flex-1 ${
+                                      isDisabled
+                                        ? "cursor-not-allowed opacity-50"
+                                        : "cursor-pointer"
+                                    }`}
                                   >
                                     {opt}
                                   </Label>
                                 </div>
                               )
                             })}
+                            {isMaxReached && (
+                              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium pt-1">
+                                Maximum of {maxSelect} options selected
+                              </p>
+                            )}
                           </div>
                         )
+                      }
+
 
                       case "dropdown":
                         return (

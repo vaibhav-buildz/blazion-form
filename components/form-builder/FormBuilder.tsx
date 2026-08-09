@@ -9,7 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { QuestionCard, type Question } from "./QuestionCard"
 import { QuestionSettings } from "./QuestionSettings"
-import { Copy, Check } from "lucide-react"
+import { Copy, Check, Clock } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+
 import {
   DndContext,
   closestCenter,
@@ -86,6 +89,22 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
   const handlePublish = async () => {
     setIsPublishing(true)
     try {
+      // Flush all current questions to Supabase DB before publishing
+      const flushPromises = questions.map((q) =>
+        fetch(`/api/questions/${q.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: q.title.trim() || "Untitled Question",
+            description: q.description || "",
+            required: q.required,
+            options: q.options || [],
+            settings: q.settings || {},
+          }),
+        })
+      )
+      await Promise.all(flushPromises)
+
       const newSlug = nanoid(10)
       const titleToSave = title.trim() || "Untitled Form"
       const res = await fetch(`/api/forms/${form.id}`, {
@@ -108,6 +127,7 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
       setIsPublishing(false)
     }
   }
+
 
   const handleUnpublish = async () => {
     setIsPublishing(true)
@@ -250,9 +270,94 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
     }
   }
 
+  const [expiresAt, setExpiresAt] = React.useState<string | null>(
+    form.settings?.expires_at || null
+  )
+  const [selectedDate, setSelectedDate] = React.useState<string>(() => {
+    if (form.settings?.expires_at) {
+      const d = new Date(form.settings.expires_at)
+      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0]
+    }
+    return ""
+  })
+  const [selectedTime, setSelectedTime] = React.useState<string>(() => {
+    if (form.settings?.expires_at) {
+      const d = new Date(form.settings.expires_at)
+      if (!isNaN(d.getTime())) {
+        const hh = String(d.getHours()).padStart(2, "0")
+        const mm = String(d.getMinutes()).padStart(2, "0")
+        return `${hh}:${mm}`
+      }
+    }
+    return "18:00"
+  })
+
+  const handleSaveExpiry = async (dateStr: string, timeStr: string) => {
+    if (!dateStr) return
+    const combined = new Date(`${dateStr}T${timeStr || "00:00"}:00`)
+    if (isNaN(combined.getTime())) return
+
+    const isoString = combined.toISOString()
+    setExpiresAt(isoString)
+
+    const updatedSettings = {
+      ...(form.settings || {}),
+      expires_at: isoString,
+    }
+
+    try {
+      await fetch(`/api/forms/${form.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: updatedSettings }),
+      })
+    } catch (err) {
+      console.error("Failed to save expiry date", err)
+    }
+  }
+
+  const handleClearExpiry = async () => {
+    setExpiresAt(null)
+    setSelectedDate("")
+    setSelectedTime("18:00")
+
+    const updatedSettings = {
+      ...(form.settings || {}),
+      expires_at: null,
+    }
+
+    try {
+      await fetch(`/api/forms/${form.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: updatedSettings }),
+      })
+    } catch (err) {
+      console.error("Failed to clear expiry date", err)
+    }
+  }
+
+  const formatExpiryDisplay = (isoString: string | null): string => {
+    if (!isoString) return ""
+    try {
+      const d = new Date(isoString)
+      if (isNaN(d.getTime())) return ""
+      return d.toLocaleString("en-GB", {
+        day: "numeric",
+        month: "short",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      })
+    } catch {
+      return ""
+    }
+  }
+
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId)
 
   return (
+
     <div className="flex flex-col h-screen overflow-hidden bg-background">
       {/* Top Navigation Bar */}
       <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 shrink-0">
@@ -275,7 +380,81 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
           />
         </div>
 
-        <div>
+        <div className="flex items-center gap-3">
+          {/* Expiry Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isLocked}
+                className="h-9 gap-1.5 text-xs border-border"
+              >
+                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                {expiresAt ? (
+                  <span className="text-foreground font-medium">
+                    Expires: {formatExpiryDisplay(expiresAt)}
+                  </span>
+                ) : (
+                  <span>Expiry</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-72 p-4 space-y-4">
+              <div className="space-y-1">
+                <h4 className="font-semibold text-sm leading-none">Form Expiry</h4>
+                <p className="text-xs text-muted-foreground">
+                  Set a date & time to close form responses automatically.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Expiry Date</Label>
+                  <Input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => {
+                      setSelectedDate(e.target.value)
+                      if (e.target.value) {
+                        handleSaveExpiry(e.target.value, selectedTime)
+                      }
+                    }}
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Expiry Time</Label>
+                  <Input
+                    type="time"
+                    value={selectedTime}
+                    onChange={(e) => {
+                      setSelectedTime(e.target.value)
+                      if (selectedDate) {
+                        handleSaveExpiry(selectedDate, e.target.value)
+                      }
+                    }}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              {expiresAt && (
+                <div className="pt-2 border-t border-border flex justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearExpiry}
+                    className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    Clear Expiry
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+
           {isLocked ? (
             <div className="flex items-center gap-3">
               <span className="text-xs text-muted-foreground font-medium hidden md:inline">
@@ -301,6 +480,7 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
           )}
         </div>
       </header>
+
 
       {/* Public URL Bar when Published */}
       {status === "published" && (

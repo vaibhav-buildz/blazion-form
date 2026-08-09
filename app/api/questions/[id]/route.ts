@@ -117,6 +117,9 @@ export async function PATCH(
     const { id } = await params
     const updates = await req.json()
 
+    console.log("PATCH QUESTION UPDATES for id", id, ":", JSON.stringify(updates, null, 2))
+
+
     // Get the question to find its form_id
     const { data: question, error: questionError } = await supabase
       .from("questions")

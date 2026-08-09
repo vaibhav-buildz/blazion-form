@@ -1,11 +1,11 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { FormCard } from "@/components/dashboard/FormCard"
 import { CreateFormButton } from "@/components/dashboard/CreateFormButton"
-import { ExternalLink, Edit3 } from "lucide-react"
+
+
+
 
 export const revalidate = 0
 
@@ -72,54 +72,10 @@ export default async function DashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {forms.map((form) => (
-            <Card
-              key={form.id}
-              className="flex flex-col justify-between border-border hover:border-border/80 transition-colors"
-            >
-              <CardHeader>
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-lg font-semibold truncate">
-                    {form.title || "Untitled Form"}
-                  </CardTitle>
-                  <span
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0 ${
-                      form.status === "published"
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {form.status === "published" ? "Published" : "Draft"}
-                  </span>
-                </div>
-                <CardDescription className="text-xs text-muted-foreground">
-                  Created {new Date(form.created_at).toLocaleDateString()}
-                </CardDescription>
-              </CardHeader>
-
-              <CardFooter className="flex items-center justify-between gap-2 pt-4 border-t border-border">
-                {form.status === "published" ? (
-                  <Link
-                    href={`/f/${form.slug}`}
-                    target="_blank"
-                    className="inline-flex items-center text-xs font-medium text-muted-foreground hover:text-foreground gap-1"
-                  >
-                    Public View <ExternalLink className="h-3 w-3" />
-                  </Link>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Draft Mode</span>
-                )}
-                <Button variant="outline" size="sm" asChild>
-                  <Link
-                    href={`/dashboard/forms/${form.id}/edit`}
-                    className="gap-1.5 text-xs"
-                  >
-                    <Edit3 className="h-3.5 w-3.5" /> Edit
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
+            <FormCard key={form.id} form={form} />
           ))}
         </div>
+
       )}
     </div>
   )

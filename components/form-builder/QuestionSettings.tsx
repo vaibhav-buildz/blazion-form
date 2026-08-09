@@ -1,3 +1,5 @@
+"use client"
+
 import * as React from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -13,30 +15,14 @@ interface QuestionSettingsProps {
   onUpdate: (id: string, updates: Partial<Question>) => void
 }
 
-export function QuestionSettings({ question, disabled = false, onUpdate }: QuestionSettingsProps) {
-  const pendingUpdates = React.useRef<Partial<Question>>({})
-  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null)
-
+export function QuestionSettings({
+  question,
+  disabled = false,
+  onUpdate,
+}: QuestionSettingsProps) {
   const handleUpdate = (updates: Partial<Question>) => {
     if (disabled) return
     onUpdate(question.id, updates)
-    
-    pendingUpdates.current = { ...pendingUpdates.current, ...updates }
-    
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    timeoutRef.current = setTimeout(async () => {
-      const payload = { ...pendingUpdates.current }
-      pendingUpdates.current = {}
-      try {
-        await fetch(`/api/questions/${question.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        })
-      } catch (err) {
-        console.error("Failed to update question", err)
-      }
-    }, 500)
   }
 
   const handleSettingUpdate = (key: string, value: any) => {
@@ -68,32 +54,33 @@ export function QuestionSettings({ question, disabled = false, onUpdate }: Quest
     handleUpdate({ options: newOptions })
   }
 
-  const isOptionsType = ["multiple_choice", "checkbox", "dropdown"].includes(question.type)
-  const displayTitle = question.title === "Untitled Question" ? "" : question.title || ""
+  const isOptionsType = ["multiple_choice", "checkbox", "dropdown"].includes(
+    question.type
+  )
 
   return (
     <fieldset disabled={disabled} className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4">Editing Question</h3>
       </div>
-      
+
       {/* Common Fields */}
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>Question Title</Label>
-          <Input 
+          <Input
             disabled={disabled}
-            value={displayTitle}
-            onChange={(e) => handleUpdate({ title: e.target.value })} 
+            value={question.title || ""}
+            onChange={(e) => handleUpdate({ title: e.target.value })}
             placeholder="Untitled Question"
           />
         </div>
-        
+
         <div className="space-y-2">
           <Label>Help Text (Optional)</Label>
-          <Textarea 
+          <Textarea
             disabled={disabled}
-            value={question.description || ""} 
+            value={question.description || ""}
             onChange={(e) => handleUpdate({ description: e.target.value })}
             placeholder="Add a description..."
             className="resize-none"
@@ -101,10 +88,10 @@ export function QuestionSettings({ question, disabled = false, onUpdate }: Quest
         </div>
 
         <div className="flex items-center space-x-2 pt-2">
-          <Checkbox 
+          <Checkbox
             disabled={disabled}
-            id="settings-required" 
-            checked={question.required} 
+            id="settings-required"
+            checked={question.required}
             onCheckedChange={(checked) => handleUpdate({ required: !!checked })}
           />
           <Label htmlFor="settings-required">Required</Label>
@@ -112,53 +99,74 @@ export function QuestionSettings({ question, disabled = false, onUpdate }: Quest
       </div>
 
       <div className="border-t border-border pt-6 space-y-4">
-        <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Type Specific Settings</h4>
-        
+        <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+          Type Specific Settings
+        </h4>
+
         {/* Text Types */}
         {(question.type === "short_text" || question.type === "long_text") && (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Placeholder Text</Label>
-              <Input 
+              <Input
                 disabled={disabled}
-                value={question.settings?.placeholder || ""} 
+                value={question.settings?.placeholder || ""}
                 onChange={(e) => handleSettingUpdate("placeholder", e.target.value)}
-                placeholder={question.type === "long_text" ? "Long text response..." : "Short text response..."}
+                placeholder={
+                  question.type === "long_text"
+                    ? "Long text response..."
+                    : "Short text response..."
+                }
               />
             </div>
-            
+
             {question.type === "short_text" && (
               <div className="space-y-2">
                 <Label>Max Characters</Label>
-                <Input 
+                <Input
                   disabled={disabled}
-                  type="number" 
-                  value={question.settings?.maxChars || ""} 
-                  onChange={(e) => handleSettingUpdate("maxChars", e.target.value ? parseInt(e.target.value) : undefined)}
+                  type="number"
+                  value={question.settings?.maxChars || ""}
+                  onChange={(e) =>
+                    handleSettingUpdate(
+                      "maxChars",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="No limit"
                 />
               </div>
             )}
-            
+
             {question.type === "long_text" && (
               <>
                 <div className="space-y-2">
                   <Label>Min Word Count</Label>
-                  <Input 
+                  <Input
                     disabled={disabled}
-                    type="number" 
-                    value={question.settings?.minWords || ""} 
-                    onChange={(e) => handleSettingUpdate("minWords", e.target.value ? parseInt(e.target.value) : undefined)}
+                    type="number"
+                    value={question.settings?.minWords || ""}
+                    onChange={(e) =>
+                      handleSettingUpdate(
+                        "minWords",
+                        e.target.value ? parseInt(e.target.value) : undefined
+                      )
+                    }
                     placeholder="No limit"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Max Character Count</Label>
-                  <Input 
+                  <Input
                     disabled={disabled}
-                    type="number" 
-                    value={question.settings?.maxChars || ""} 
-                    onChange={(e) => handleSettingUpdate("maxChars", e.target.value ? parseInt(e.target.value) : undefined)}
+                    type="number"
+                    value={question.settings?.maxChars || ""}
+                    onChange={(e) =>
+                      handleSettingUpdate(
+                        "maxChars",
+                        e.target.value ? parseInt(e.target.value) : undefined
+                      )
+                    }
                     placeholder="No limit"
                   />
                 </div>
@@ -174,14 +182,14 @@ export function QuestionSettings({ question, disabled = false, onUpdate }: Quest
               <Label>Options</Label>
               {question.options?.map((opt, idx) => (
                 <div key={idx} className="flex items-center gap-2">
-                  <Input 
+                  <Input
                     disabled={disabled}
-                    value={opt} 
-                    onChange={(e) => handleOptionUpdate(idx, e.target.value)} 
+                    value={opt}
+                    onChange={(e) => handleOptionUpdate(idx, e.target.value)}
                   />
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleOptionRemove(idx)}
                     disabled={disabled || (question.options?.length || 0) <= 1}
                     className="shrink-0"
@@ -190,39 +198,57 @@ export function QuestionSettings({ question, disabled = false, onUpdate }: Quest
                   </Button>
                 </div>
               ))}
-              <Button variant="outline" size="sm" onClick={handleOptionAdd} disabled={disabled} className="w-full mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleOptionAdd}
+                disabled={disabled}
+                className="w-full mt-2"
+              >
                 <Plus className="h-4 w-4 mr-2" /> Add option
               </Button>
             </div>
-            
+
             <div className="flex items-center space-x-2 pt-2">
-              <Checkbox 
+              <Checkbox
                 disabled={disabled}
-                id="settings-shuffle" 
-                checked={question.settings?.shuffle || false} 
-                onCheckedChange={(checked) => handleSettingUpdate("shuffle", !!checked)}
+                id="settings-shuffle"
+                checked={question.settings?.shuffle || false}
+                onCheckedChange={(checked) =>
+                  handleSettingUpdate("shuffle", !!checked)
+                }
               />
               <Label htmlFor="settings-shuffle">Shuffle options</Label>
             </div>
-            
+
             {question.type === "checkbox" && (
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="space-y-2">
                   <Label>Min selections</Label>
-                  <Input 
+                  <Input
                     disabled={disabled}
-                    type="number" 
-                    value={question.settings?.minSelect || ""} 
-                    onChange={(e) => handleSettingUpdate("minSelect", e.target.value ? parseInt(e.target.value) : undefined)}
+                    type="number"
+                    value={question.settings?.minSelect || ""}
+                    onChange={(e) =>
+                      handleSettingUpdate(
+                        "minSelect",
+                        e.target.value ? parseInt(e.target.value) : undefined
+                      )
+                    }
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Max selections</Label>
-                  <Input 
+                  <Input
                     disabled={disabled}
-                    type="number" 
-                    value={question.settings?.maxSelect || ""} 
-                    onChange={(e) => handleSettingUpdate("maxSelect", e.target.value ? parseInt(e.target.value) : undefined)}
+                    type="number"
+                    value={question.settings?.maxSelect || ""}
+                    onChange={(e) =>
+                      handleSettingUpdate(
+                        "maxSelect",
+                        e.target.value ? parseInt(e.target.value) : undefined
+                      )
+                    }
                   />
                 </div>
               </div>
@@ -233,5 +259,6 @@ export function QuestionSettings({ question, disabled = false, onUpdate }: Quest
     </fieldset>
   )
 }
+
 
 
