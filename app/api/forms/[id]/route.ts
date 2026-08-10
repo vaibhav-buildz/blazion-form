@@ -2,6 +2,8 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
+import bcrypt from "bcryptjs"
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -39,10 +41,10 @@ export async function PATCH(
   try {
     const body = await req.json()
 
-    // Verify form belongs to user
+    // Verify form belongs to user and get existing settings
     const { data: existingForm, error: fetchError } = await supabase
       .from("forms")
-      .select("user_id")
+      .select("user_id, settings")
       .eq("id", id)
       .single()
 
@@ -54,13 +56,35 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
+    let updateData = { ...body }
+
+    if (body.settings && typeof body.settings === "object") {
+      const mergedSettings = {
+        ...(existingForm.settings || {}),
+        ...body.settings,
+      }
+
+      // Handle server-side password hashing
+      if (body.settings.password && typeof body.settings.password === "string") {
+        const hashedPassword = await bcrypt.hash(body.settings.password, 10)
+        mergedSettings.password_hash = hashedPassword
+        delete mergedSettings.password
+      } else if (body.settings.clear_password) {
+        mergedSettings.password_hash = null
+        delete mergedSettings.clear_password
+      }
+
+      updateData.settings = mergedSettings
+    }
+
     // Update form
     const { data: updatedForm, error: updateError } = await supabase
       .from("forms")
-      .update(body)
+      .update(updateData)
       .eq("id", id)
       .select()
       .single()
+
 
     if (updateError) {
       console.error("Error updating form:", updateError)

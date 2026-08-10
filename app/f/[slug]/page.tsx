@@ -73,6 +73,34 @@ export default async function PublicFormPage({
     }
   }
 
+  // Check form response limit
+  if (
+    form.settings?.response_limit &&
+    typeof form.settings.response_limit === "number" &&
+    form.settings.response_limit > 0
+  ) {
+    const { count: responseCount } = await supabase
+      .from("responses")
+      .select("id", { count: "exact", head: true })
+      .eq("form_id", form.id)
+
+    if (responseCount !== null && responseCount >= form.settings.response_limit) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background p-4">
+          <div className="text-center space-y-3 max-w-md border border-border bg-card p-8 rounded-lg shadow-sm">
+            <h1 className="text-2xl font-bold text-foreground">
+              Form Closed
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              This form is no longer accepting responses (response limit reached).
+            </p>
+          </div>
+        </div>
+      )
+    }
+  }
+
+
 
   // Fetch questions for this form ordered by position
   const { data: questions } = await supabase

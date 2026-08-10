@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle2, Loader2 } from "lucide-react"
+import { CheckCircle2, Loader2, Lock } from "lucide-react"
 
 export interface Question {
   id: string
@@ -35,6 +35,7 @@ interface PublicFormFillProps {
     title: string
     description?: string
     slug: string
+    settings?: Record<string, any>
   }
   questions: Question[]
 }
@@ -42,6 +43,89 @@ interface PublicFormFillProps {
 export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   const [submitted, setSubmitted] = React.useState(false)
   const [submitError, setSubmitError] = React.useState<string | null>(null)
+
+  // Password Protection Gate State
+  const [isPasswordVerified, setIsPasswordVerified] = React.useState<boolean>(
+    !Boolean(form.settings?.password_hash)
+  )
+  const [passwordInput, setPasswordInput] = React.useState("")
+  const [passwordError, setPasswordError] = React.useState<string | null>(null)
+  const [isVerifyingPassword, setIsVerifyingPassword] = React.useState(false)
+
+  const handleVerifyPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!passwordInput) return
+    setIsVerifyingPassword(true)
+    setPasswordError(null)
+    try {
+      const res = await fetch(`/api/forms/${form.slug}/verify-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: passwordInput }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || "Incorrect password")
+      }
+      setIsPasswordVerified(true)
+    } catch (err: any) {
+      setPasswordError(err.message || "Incorrect password")
+    } finally {
+      setIsVerifyingPassword(false)
+    }
+  }
+
+  if (!isPasswordVerified) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+        <Card className="max-w-md w-full p-8 space-y-6 border-border shadow-lg text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Lock className="h-6 w-6" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">Password Protected</h2>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              This form requires a password to view and submit answers.
+            </p>
+          </div>
+
+          <form onSubmit={handleVerifyPassword} className="space-y-4 text-left">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Form Password</Label>
+              <Input
+                type="password"
+                placeholder="Enter password"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value)
+                  setPasswordError(null)
+                }}
+                required
+                className="w-full"
+              />
+              {passwordError && (
+                <p className="text-xs text-destructive font-medium pt-1">
+                  {passwordError}
+                </p>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isVerifyingPassword}
+              className="w-full font-semibold"
+            >
+              {isVerifyingPassword && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Unlock Form
+            </Button>
+          </form>
+        </Card>
+      </div>
+    )
+  }
+
 
   const {
     control,

@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { QuestionCard, type Question } from "./QuestionCard"
 import { QuestionSettings } from "./QuestionSettings"
-import { Copy, Check, Clock } from "lucide-react"
+import { Copy, Check, Clock, Settings } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { FormSettingsDialog } from "./FormSettingsDialog"
 
 import {
   DndContext,
@@ -27,12 +28,14 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable"
 
+
 interface FormBuilderProps {
   form: {
     id: string
     title: string
     slug: string
     status: string
+    settings?: Record<string, any>
     [key: string]: any
   }
   initialQuestions?: any[]
@@ -46,8 +49,9 @@ const QUESTION_TYPES = [
   { id: "dropdown", label: "Dropdown" },
 ]
 
-export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
+export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBuilderProps) {
   const router = useRouter()
+  const [form, setForm] = React.useState(initialForm)
   const [title, setTitle] = React.useState(
     form.title === "Untitled Form" ? "" : form.title || ""
   )
@@ -58,6 +62,8 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
   const [isPublishing, setIsPublishing] = React.useState(false)
   const [copied, setCopied] = React.useState(false)
   const [publicUrl, setPublicUrl] = React.useState("")
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
+
 
   const isLocked = status === "published"
 
@@ -382,6 +388,16 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Settings Dialog Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSettingsOpen(true)}
+            className="h-9 gap-1.5 text-xs border-border"
+          >
+            <Settings className="h-3.5 w-3.5 text-muted-foreground" /> Settings
+          </Button>
+
           {/* Expiry Popover */}
           <Popover>
             <PopoverTrigger asChild>
@@ -455,6 +471,21 @@ export function FormBuilder({ form, initialQuestions = [] }: FormBuilderProps) {
               )}
             </PopoverContent>
           </Popover>
+
+          <FormSettingsDialog
+            form={form}
+            open={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
+            onSettingsSaved={(newSettings) => {
+              setForm((prev) => ({ ...prev, settings: newSettings }))
+              if (newSettings.expires_at) {
+                setExpiresAt(newSettings.expires_at)
+              } else if (newSettings.expires_at === null) {
+                setExpiresAt(null)
+              }
+            }}
+          />
+
 
           {isLocked ? (
             <div className="flex items-center gap-3">
