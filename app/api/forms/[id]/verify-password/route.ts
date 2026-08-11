@@ -5,9 +5,9 @@ import bcrypt from "bcryptjs"
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { slug } = await params
+  const { id } = await params
   const cookieStore = await cookies()
 
   const supabase = createServerClient(
@@ -30,7 +30,7 @@ export async function POST(
   )
 
   try {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug)
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
 
     let formQuery = supabase
       .from("forms")
@@ -38,9 +38,9 @@ export async function POST(
       .eq("status", "published")
 
     if (isUuid) {
-      formQuery = formQuery.or(`id.eq.${slug},slug.eq.${slug}`)
+      formQuery = formQuery.or(`id.eq.${id},slug.eq.${id}`)
     } else {
-      formQuery = formQuery.eq("slug", slug)
+      formQuery = formQuery.eq("slug", id)
     }
 
     const { data: form, error: formError } = await formQuery.maybeSingle()

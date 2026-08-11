@@ -121,8 +121,8 @@ export function FormCard({ form }: FormCardProps) {
               {responseCount} {responseCount === 1 ? "response" : "responses"}
             </span>
 
-            <span className="text-muted-foreground ml-auto">
-              Created {new Date(form.created_at).toLocaleDateString()}
+            <span className="text-muted-foreground ml-auto" suppressHydrationWarning>
+              Created {new Date(form.created_at).toLocaleDateString("en-US")}
             </span>
           </div>
         </CardHeader>

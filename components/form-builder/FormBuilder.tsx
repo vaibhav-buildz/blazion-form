@@ -9,9 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { QuestionCard, type Question } from "./QuestionCard"
 import { QuestionSettings } from "./QuestionSettings"
-import { Copy, Check, Clock, Settings } from "lucide-react"
-import { Label } from "@/components/ui/label"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Copy, Check, Settings } from "lucide-react"
 import { FormSettingsDialog } from "./FormSettingsDialog"
 
 import {
@@ -111,18 +109,20 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
       )
       await Promise.all(flushPromises)
 
-      const slugToSave = form.slug || slug || nanoid(10)
+      // Always generate a new unique slug when publishing from draft
+      const newSlug = nanoid(10)
       const titleToSave = title.trim() || "Untitled Form"
       const res = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "published", slug: slugToSave, title: titleToSave }),
+        body: JSON.stringify({ status: "published", slug: newSlug, title: titleToSave }),
       })
       if (res.ok) {
         setStatus("published")
-        setSlug(slugToSave)
+        setSlug(newSlug)
+        setForm((prev) => ({ ...prev, slug: newSlug, status: "published" }))
         if (typeof window !== "undefined") {
-          setPublicUrl(`${window.location.origin}/f/${slugToSave}`)
+          setPublicUrl(`${window.location.origin}/f/${newSlug}`)
         }
       } else {
         console.error("Failed to publish form")
@@ -146,6 +146,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
       })
       if (res.ok) {
         setStatus("draft")
+        setForm((prev) => ({ ...prev, status: "draft" }))
         router.refresh()
       } else {
         console.error("Failed to unpublish form")
@@ -277,90 +278,6 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
     }
   }
 
-  const [expiresAt, setExpiresAt] = React.useState<string | null>(
-    form.settings?.expires_at || null
-  )
-  const [selectedDate, setSelectedDate] = React.useState<string>(() => {
-    if (form.settings?.expires_at) {
-      const d = new Date(form.settings.expires_at)
-      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0]
-    }
-    return ""
-  })
-  const [selectedTime, setSelectedTime] = React.useState<string>(() => {
-    if (form.settings?.expires_at) {
-      const d = new Date(form.settings.expires_at)
-      if (!isNaN(d.getTime())) {
-        const hh = String(d.getHours()).padStart(2, "0")
-        const mm = String(d.getMinutes()).padStart(2, "0")
-        return `${hh}:${mm}`
-      }
-    }
-    return "18:00"
-  })
-
-  const handleSaveExpiry = async (dateStr: string, timeStr: string) => {
-    if (!dateStr) return
-    const combined = new Date(`${dateStr}T${timeStr || "00:00"}:00`)
-    if (isNaN(combined.getTime())) return
-
-    const isoString = combined.toISOString()
-    setExpiresAt(isoString)
-
-    const updatedSettings = {
-      ...(form.settings || {}),
-      expires_at: isoString,
-    }
-
-    try {
-      await fetch(`/api/forms/${form.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: updatedSettings }),
-      })
-    } catch (err) {
-      console.error("Failed to save expiry date", err)
-    }
-  }
-
-  const handleClearExpiry = async () => {
-    setExpiresAt(null)
-    setSelectedDate("")
-    setSelectedTime("18:00")
-
-    const updatedSettings = {
-      ...(form.settings || {}),
-      expires_at: null,
-    }
-
-    try {
-      await fetch(`/api/forms/${form.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: updatedSettings }),
-      })
-    } catch (err) {
-      console.error("Failed to clear expiry date", err)
-    }
-  }
-
-  const formatExpiryDisplay = (isoString: string | null): string => {
-    if (!isoString) return ""
-    try {
-      const d = new Date(isoString)
-      if (isNaN(d.getTime())) return ""
-      return d.toLocaleString("en-GB", {
-        day: "numeric",
-        month: "short",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      })
-    } catch {
-      return ""
-    }
-  }
-
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId)
 
   return (
@@ -398,91 +315,12 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
             <Settings className="h-3.5 w-3.5 text-muted-foreground" /> Settings
           </Button>
 
-          {/* Expiry Popover */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isLocked}
-                className="h-9 gap-1.5 text-xs border-border"
-              >
-                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                {expiresAt ? (
-                  <span className="text-foreground font-medium">
-                    Expires: {formatExpiryDisplay(expiresAt)}
-                  </span>
-                ) : (
-                  <span>Expiry</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-72 p-4 space-y-4">
-              <div className="space-y-1">
-                <h4 className="font-semibold text-sm leading-none">Form Expiry</h4>
-                <p className="text-xs text-muted-foreground">
-                  Set a date & time to close form responses automatically.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Expiry Date</Label>
-                  <Input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => {
-                      setSelectedDate(e.target.value)
-                      if (e.target.value) {
-                        handleSaveExpiry(e.target.value, selectedTime)
-                      }
-                    }}
-                    className="h-8 text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-xs">Expiry Time</Label>
-                  <Input
-                    type="time"
-                    value={selectedTime}
-                    onChange={(e) => {
-                      setSelectedTime(e.target.value)
-                      if (selectedDate) {
-                        handleSaveExpiry(selectedDate, e.target.value)
-                      }
-                    }}
-                    className="h-8 text-xs"
-                  />
-                </div>
-              </div>
-
-              {expiresAt && (
-                <div className="pt-2 border-t border-border flex justify-end">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearExpiry}
-                    className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    Clear Expiry
-                  </Button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
-
           <FormSettingsDialog
             form={form}
             open={isSettingsOpen}
             onOpenChange={setIsSettingsOpen}
             onSettingsSaved={(newSettings) => {
               setForm((prev) => ({ ...prev, settings: newSettings }))
-              if (newSettings.expires_at) {
-                setExpiresAt(newSettings.expires_at)
-              } else if (newSettings.expires_at === null) {
-                setExpiresAt(null)
-              }
             }}
           />
 

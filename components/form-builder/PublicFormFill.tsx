@@ -52,13 +52,27 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   const [passwordError, setPasswordError] = React.useState<string | null>(null)
   const [isVerifyingPassword, setIsVerifyingPassword] = React.useState(false)
 
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<Record<string, any>>({
+    mode: "onChange",
+    defaultValues: questions.reduce((acc, q) => {
+      acc[q.id] = q.type === "checkbox" ? [] : ""
+      return acc
+    }, {} as Record<string, any>),
+  })
+
   const handleVerifyPassword = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!passwordInput) return
     setIsVerifyingPassword(true)
     setPasswordError(null)
     try {
-      const res = await fetch(`/api/forms/${form.slug}/verify-password`, {
+      const res = await fetch(`/api/forms/${form.slug || form.id}/verify-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: passwordInput }),
@@ -126,27 +140,12 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     )
   }
 
-
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<Record<string, any>>({
-    mode: "onChange",
-    defaultValues: questions.reduce((acc, q) => {
-      acc[q.id] = q.type === "checkbox" ? [] : ""
-      return acc
-    }, {} as Record<string, any>),
-  })
-
   const onSubmit = async (data: Record<string, any>) => {
     console.log("SUBMITTING FORM ANSWERS:", data)
     setSubmitError(null)
     try {
-      console.log("POSTing payload to:", `/api/forms/${form.slug}/submit`, { answers: data })
-      const res = await fetch(`/api/forms/${form.slug}/submit`, {
+      console.log("POSTing payload to:", `/api/forms/${form.slug || form.id}/submit`, { answers: data })
+      const res = await fetch(`/api/forms/${form.slug || form.id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers: data }),
