@@ -74,17 +74,41 @@ export default async function PublicFormPage({
   }
 
   // Check form response limit
+  const rawLimit = form.settings?.response_limit
+  const responseLimitNum =
+    rawLimit !== undefined && rawLimit !== null && rawLimit !== ""
+      ? Number(rawLimit)
+      : null
+
   if (
-    form.settings?.response_limit &&
-    typeof form.settings.response_limit === "number" &&
-    form.settings.response_limit > 0
+    responseLimitNum !== null &&
+    !isNaN(responseLimitNum) &&
+    responseLimitNum > 0
   ) {
-    const { count: responseCount } = await supabase
+    const { count: responseCount, error: countError } = await supabase
       .from("responses")
       .select("id", { count: "exact", head: true })
       .eq("form_id", form.id)
 
-    if (responseCount !== null && responseCount >= form.settings.response_limit) {
+    const actualCount = responseCount ?? 0
+
+    console.log("DEBUG RESPONSE LIMIT CHECK:", {
+      formId: form.id,
+      slug: form.slug,
+      rawLimitSetting: rawLimit,
+      typeOfRawLimit: typeof rawLimit,
+      parsedLimitNum: responseLimitNum,
+      queryResponseCount: responseCount,
+      countError: countError?.message || null,
+      actualCountUsed: actualCount,
+      isLimitReached: actualCount >= responseLimitNum,
+    })
+
+    if (countError) {
+      console.error("Error querying response count:", countError)
+    }
+
+    if (actualCount >= responseLimitNum) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
           <div className="text-center space-y-3 max-w-md border border-border bg-card p-8 rounded-lg shadow-sm">

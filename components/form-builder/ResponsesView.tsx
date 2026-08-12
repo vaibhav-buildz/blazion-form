@@ -155,9 +155,9 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                 <TableBody>
                   {responses.map((resp) => (
                     <TableRow key={resp.id}>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap" suppressHydrationWarning>
                         {resp.submitted_at || resp.created_at
-                          ? new Date(resp.submitted_at || resp.created_at!).toLocaleString()
+                          ? new Date(resp.submitted_at || resp.created_at!).toLocaleString("en-US")
                           : "-"}
                       </TableCell>
 
