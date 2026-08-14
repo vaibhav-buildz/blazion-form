@@ -153,6 +153,7 @@ export async function PATCH(
     if (updates.required !== undefined) allowedUpdates.required = updates.required
     if (updates.options !== undefined) allowedUpdates.options = updates.options
     if (updates.settings !== undefined) allowedUpdates.settings = updates.settings
+    if (updates.rules !== undefined) allowedUpdates.rules = updates.rules
 
     const { data: updatedQuestion, error: updateError } = await supabase
       .from("questions")

@@ -7,6 +7,13 @@ import { Trash, ChevronDown, GripVertical } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
+export interface QuestionRule {
+  ifQuestionId: string
+  operator: 'equals' | 'not_equals' | 'contains'
+  value: string
+  action: 'show' | 'hide'
+}
+
 export interface Question {
   id: string
   type: string
@@ -16,6 +23,7 @@ export interface Question {
   position: number
   options?: string[]
   settings?: any
+  rules?: QuestionRule[]
 }
 
 interface QuestionCardProps {
@@ -102,12 +110,17 @@ export function QuestionCard({
                   onSelect(question.id)
                 }}
               />
-              <div className="px-2">
+              <div className="px-2 flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                   {TYPE_LABELS[question.type] || question.type}
                 </span>
+                {question.rules && question.rules.length > 0 && (
+                  <span className="inline-flex items-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-xs font-medium border border-amber-500/20">
+                    Conditional
+                  </span>
+                )}
                 {question.description && (
-                  <p className="mt-2 text-sm text-muted-foreground">{question.description}</p>
+                  <p className="mt-2 text-sm text-muted-foreground w-full">{question.description}</p>
                 )}
               </div>
             </div>

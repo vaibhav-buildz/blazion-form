@@ -104,6 +104,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
             required: q.required,
             options: q.options || [],
             settings: q.settings || {},
+            rules: q.rules || [],
           }),
         })
       )
@@ -465,7 +466,8 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
         <aside className="w-72 border-l border-border bg-card p-6 shrink-0 overflow-y-auto">
           {selectedQuestion ? (
             <QuestionSettings 
-              question={selectedQuestion} 
+              question={selectedQuestion}
+              questions={questions} 
               disabled={isLocked}
               onUpdate={handleUpdateQuestion} 
             />

@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/select"
 import { CheckCircle2, Loader2, Lock } from "lucide-react"
 
+import { type QuestionRule } from "./QuestionCard"
+
 export interface Question {
   id: string
   type: string
@@ -27,6 +29,7 @@ export interface Question {
   position: number
   options?: string[]
   settings?: any
+  rules?: QuestionRule[]
 }
 
 interface PublicFormFillProps {
@@ -38,6 +41,81 @@ interface PublicFormFillProps {
     settings?: Record<string, any>
   }
   questions: Question[]
+}
+
+/**
+ * Evaluates conditional logic rules for a question against current form answers.
+ *
+ * Rule Precedence Strategy:
+ * 1. If a question has NO rules, it is visible by default (returns true).
+ * 2. If a question HAS rules, it starts hidden by default unless evaluated:
+ *    - If ANY matching rule has action === 'hide', the question is HIDDEN (returns false) — 'hide' rules override.
+ *    - Otherwise, if there is at least one 'show' rule and any 'show' rule condition matches, the question is VISIBLE (returns true).
+ *    - If there are ONLY 'hide' rules and none matched, the question is VISIBLE (returns true).
+ *    - If there are 'show' rules and none matched, the question is HIDDEN (returns false).
+ */
+export function evaluateRules(question: Question, answers: Record<string, any>): boolean {
+  if (!question.rules || question.rules.length === 0) {
+    return true
+  }
+
+  let hasHideMatch = false
+  let hasShowRule = false
+  let hasShowMatch = false
+
+  for (const rule of question.rules) {
+    const answerVal = answers[rule.ifQuestionId]
+    let isMatch = false
+
+    if (answerVal !== undefined && answerVal !== null) {
+      if (Array.isArray(answerVal)) {
+        if (rule.operator === "equals") {
+          isMatch = answerVal.includes(rule.value)
+        } else if (rule.operator === "not_equals") {
+          isMatch = !answerVal.includes(rule.value)
+        } else if (rule.operator === "contains") {
+          const target = (rule.value || "").toLowerCase()
+          isMatch = answerVal.some((item) => String(item).toLowerCase().includes(target))
+        }
+      } else {
+        const strVal = String(answerVal).trim()
+        const target = (rule.value || "").trim()
+
+        if (rule.operator === "equals") {
+          isMatch = strVal === target
+        } else if (rule.operator === "not_equals") {
+          isMatch = strVal !== target
+        } else if (rule.operator === "contains") {
+          isMatch = strVal.toLowerCase().includes(target.toLowerCase())
+        }
+      }
+    } else {
+      if (rule.operator === "not_equals" && rule.value) {
+        isMatch = true
+      }
+    }
+
+    if (rule.action === "hide") {
+      if (isMatch) {
+        hasHideMatch = true
+      }
+    } else if (rule.action === "show") {
+      hasShowRule = true
+      if (isMatch) {
+        hasShowMatch = true
+      }
+    }
+  }
+
+  if (hasHideMatch) {
+    return false
+  }
+
+  if (hasShowRule) {
+    return hasShowMatch
+  }
+
+  return true
 }
 
 export function PublicFormFill({ form, questions }: PublicFormFillProps) {
@@ -65,6 +143,25 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
       return acc
     }, {} as Record<string, any>),
   })
+
+  const answers = watch()
+
+  // Clear answers of questions that become hidden after previously being visible/answered
+  React.useEffect(() => {
+    questions.forEach((q) => {
+      const visible = evaluateRules(q, answers)
+      if (!visible) {
+        const currentVal = answers[q.id]
+        const emptyVal = q.type === "checkbox" ? [] : ""
+        const isAnswered = Array.isArray(currentVal)
+          ? currentVal.length > 0
+          : currentVal !== "" && currentVal !== undefined && currentVal !== null
+        if (isAnswered) {
+          setValue(q.id, emptyVal, { shouldValidate: true })
+        }
+      }
+    })
+  }, [answers, questions, setValue])
 
   const handleVerifyPassword = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -141,14 +238,22 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   }
 
   const onSubmit = async (data: Record<string, any>) => {
-    console.log("SUBMITTING FORM ANSWERS:", data)
+    // Filter out answers for hidden questions
+    const visibleAnswers: Record<string, any> = {}
+    questions.forEach((q) => {
+      if (evaluateRules(q, data)) {
+        visibleAnswers[q.id] = data[q.id]
+      }
+    })
+
+    console.log("SUBMITTING FORM ANSWERS:", visibleAnswers)
     setSubmitError(null)
     try {
-      console.log("POSTing payload to:", `/api/forms/${form.slug || form.id}/submit`, { answers: data })
+      console.log("POSTing payload to:", `/api/forms/${form.slug || form.id}/submit`, { answers: visibleAnswers })
       const res = await fetch(`/api/forms/${form.slug || form.id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: data }),
+        body: JSON.stringify({ answers: visibleAnswers }),
       })
 
       console.log("RESPONSE STATUS:", res.status)
@@ -204,33 +309,41 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
         {/* Questions Form */}
         <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
 
-          {questions.map((question) => (
-            <Card key={question.id} className="p-6 border-border shadow-sm space-y-4">
-              <div>
-                <Label className="text-base font-semibold text-foreground flex items-center gap-1">
-                  <span>{question.title || "Untitled Question"}</span>
+          {questions.map((question) => {
+            if (!evaluateRules(question, answers)) {
+              return null
+            }
 
-                  {question.required && (
-                    <span className="text-destructive font-bold" title="Required">
-                      *
-                    </span>
+            return (
+              <Card key={question.id} className="p-6 border-border shadow-sm space-y-4">
+                <div>
+                  <Label className="text-base font-semibold text-foreground flex items-center gap-1">
+                    <span>{question.title || "Untitled Question"}</span>
+
+                    {question.required && (
+                      <span className="text-destructive font-bold" title="Required">
+                        *
+                      </span>
+                    )}
+                  </Label>
+                  {question.description && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {question.description}
+                    </p>
                   )}
-                </Label>
-                {question.description && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {question.description}
-                  </p>
-                )}
-              </div>
+                </div>
 
-              {/* Input field based on type */}
-              <div>
-                <Controller
-                  name={question.id}
-                  control={control}
-                  rules={{
-                    validate: (value) => {
-                      switch (question.type) {
+                {/* Input field based on type */}
+                <div>
+                  <Controller
+                    name={question.id}
+                    control={control}
+                    rules={{
+                      validate: (value) => {
+                        if (!evaluateRules(question, answers)) {
+                          return true
+                        }
+                        switch (question.type) {
                         case "short_text":
                         case "long_text": {
                           const strVal = typeof value === "string" ? value.trim() : ""
@@ -529,7 +642,7 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                 </p>
               )}
             </Card>
-          ))}
+          )})}
 
           {submitError && (
             <div className="rounded-md bg-destructive/10 p-4 border border-destructive/20 text-sm text-destructive font-medium">
