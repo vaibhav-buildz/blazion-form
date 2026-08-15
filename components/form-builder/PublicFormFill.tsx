@@ -118,9 +118,42 @@ export function evaluateRules(question: Question, answers: Record<string, any>):
   return true
 }
 
+export interface FormSection {
+  header?: Question
+  questions: Question[]
+}
+
+export function parseSections(questions: Question[]): FormSection[] {
+  const sections: FormSection[] = []
+  let currentSection: FormSection = { questions: [] }
+
+  for (const q of questions) {
+    if (q.type === "section_break") {
+      if (currentSection.header || currentSection.questions.length > 0) {
+        sections.push(currentSection)
+      }
+      currentSection = { header: q, questions: [] }
+    } else {
+      currentSection.questions.push(q)
+    }
+  }
+
+  if (currentSection.header || currentSection.questions.length > 0 || sections.length === 0) {
+    sections.push(currentSection)
+  }
+
+  return sections
+}
+
 export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   const [submitted, setSubmitted] = React.useState(false)
   const [submitError, setSubmitError] = React.useState<string | null>(null)
+  const [currentSectionIndex, setCurrentSectionIndex] = React.useState(0)
+
+  const sections = React.useMemo(() => parseSections(questions), [questions])
+  const totalSections = sections.length
+  const safeSectionIndex = Math.min(currentSectionIndex, Math.max(0, totalSections - 1))
+  const currentSection = sections[safeSectionIndex] || { questions: [] }
 
   // Password Protection Gate State
   const [isPasswordVerified, setIsPasswordVerified] = React.useState<boolean>(
@@ -135,16 +168,41 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     handleSubmit,
     setValue,
     watch,
+    trigger,
     formState: { errors, isSubmitting },
   } = useForm<Record<string, any>>({
     mode: "onChange",
     defaultValues: questions.reduce((acc, q) => {
-      acc[q.id] = q.type === "checkbox" ? [] : ""
+      if (q.type !== "section_break") {
+        acc[q.id] = q.type === "checkbox" ? [] : ""
+      }
       return acc
     }, {} as Record<string, any>),
   })
 
   const answers = watch()
+
+  const handleNextSection = async () => {
+    const visibleQuestionsInCurrentSection = currentSection.questions.filter((q) =>
+      evaluateRules(q, answers)
+    )
+    const fieldNamesToValidate = visibleQuestionsInCurrentSection.map((q) => q.id)
+
+    const isValid = fieldNamesToValidate.length > 0 ? await trigger(fieldNamesToValidate) : true
+    if (isValid) {
+      setCurrentSectionIndex((prev) => Math.min(totalSections - 1, prev + 1))
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" })
+      }
+    }
+  }
+
+  const handlePrevSection = () => {
+    setCurrentSectionIndex((prev) => Math.max(0, prev - 1))
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }
 
   // Clear answers of questions that become hidden after previously being visible/answered
   React.useEffect(() => {
@@ -238,10 +296,10 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   }
 
   const onSubmit = async (data: Record<string, any>) => {
-    // Filter out answers for hidden questions
+    // Filter out answers for hidden questions or section_break items
     const visibleAnswers: Record<string, any> = {}
     questions.forEach((q) => {
-      if (evaluateRules(q, data)) {
+      if (q.type !== "section_break" && evaluateRules(q, data)) {
         visibleAnswers[q.id] = data[q.id]
       }
     })
@@ -273,6 +331,18 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
 
   const onError = (formErrors: any) => {
     console.log("FORM VALIDATION FAILED ON SUBMIT. ERRORS:", formErrors)
+    const firstErrorQuestionId = Object.keys(formErrors)[0]
+    if (firstErrorQuestionId) {
+      const errorSectionIdx = sections.findIndex((sec) =>
+        sec.questions.some((q) => q.id === firstErrorQuestionId)
+      )
+      if (errorSectionIdx !== -1 && errorSectionIdx !== safeSectionIndex) {
+        setCurrentSectionIndex(errorSectionIdx)
+        if (typeof window !== "undefined") {
+          window.scrollTo({ top: 0, behavior: "smooth" })
+        }
+      }
+    }
   }
 
   if (submitted) {
@@ -294,6 +364,22 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   return (
     <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
       <div className="mx-auto max-w-2xl space-y-6">
+        {/* Multi-step Progress Bar */}
+        {totalSections > 1 && (
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              <span>Step {safeSectionIndex + 1} of {totalSections}</span>
+              <span>{Math.round(((safeSectionIndex + 1) / totalSections) * 100)}% Completed</span>
+            </div>
+            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-300 ease-in-out"
+                style={{ width: `${((safeSectionIndex + 1) / totalSections) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Form Title & Description Header Card */}
         <Card className="p-8 border-border shadow-sm">
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
@@ -306,10 +392,24 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
           )}
         </Card>
 
+        {/* Section Header Card (if section break header exists for current section) */}
+        {currentSection.header && (
+          <Card className="p-6 border-border shadow-sm bg-card space-y-2 border-l-4 border-l-primary">
+            <h2 className="text-xl font-bold text-foreground">
+              {currentSection.header.title || "Untitled Section"}
+            </h2>
+            {currentSection.header.description && (
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {currentSection.header.description}
+              </p>
+            )}
+          </Card>
+        )}
+
         {/* Questions Form */}
         <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
 
-          {questions.map((question) => {
+          {currentSection.questions.map((question) => {
             if (!evaluateRules(question, answers)) {
               return null
             }
@@ -650,16 +750,42 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
             </div>
           )}
 
-          <div className="flex justify-end pt-2">
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              size="lg"
-              className="w-full sm:w-auto px-8 font-semibold"
-            >
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Submit
-            </Button>
+          {/* Navigation Controls */}
+          <div className="flex items-center justify-between pt-4">
+            {safeSectionIndex > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={handlePrevSection}
+                className="px-6 font-semibold"
+              >
+                Previous
+              </Button>
+            ) : (
+              <div />
+            )}
+
+            {safeSectionIndex < totalSections - 1 ? (
+              <Button
+                type="button"
+                size="lg"
+                onClick={handleNextSection}
+                className="px-8 font-semibold"
+              >
+                Next
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                size="lg"
+                className="px-8 font-semibold"
+              >
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Submit
+              </Button>
+            )}
           </div>
         </form>
       </div>

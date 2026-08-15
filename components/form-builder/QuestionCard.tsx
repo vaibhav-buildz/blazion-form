@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Trash, ChevronDown, GripVertical } from "lucide-react"
+import { Trash, ChevronDown, GripVertical, Split } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
@@ -41,6 +41,7 @@ const TYPE_LABELS: Record<string, string> = {
   multiple_choice: "Multiple Choice",
   checkbox: "Checkbox",
   dropdown: "Dropdown",
+  section_break: "Section Break",
 }
 
 export function QuestionCard({
@@ -68,6 +69,85 @@ export function QuestionCard({
   const isOptionsType = ["multiple_choice", "checkbox", "dropdown"].includes(
     question.type
   )
+
+  if (question.type === "section_break") {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        onClick={() => onSelect(question.id)}
+        className={`relative mb-3 rounded-lg border-2 border-dashed bg-muted/30 p-4 transition-colors ${
+          isDragging ? "opacity-50 z-10 shadow-lg" : ""
+        } ${
+          isSelected
+            ? "border-primary ring-1 ring-primary"
+            : "border-border hover:border-primary/50"
+        } ${disabled ? "opacity-90" : ""}`}
+      >
+        <div className="flex items-start gap-2">
+          <div
+            className={`mt-1 flex h-8 w-6 items-center justify-center text-muted-foreground touch-none rounded ${
+              disabled ? "cursor-not-allowed opacity-40" : "cursor-grab active:cursor-grabbing hover:text-foreground hover:bg-accent/50"
+            } shrink-0`}
+            {...(!disabled ? attributes : {})}
+            {...(!disabled ? listeners : {})}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-4 w-4" />
+          </div>
+
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Split className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                  Section Break (Page Break)
+                </span>
+              </div>
+              <Button
+                disabled={disabled}
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-destructive shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDelete(question.id)
+                }}
+              >
+                <Trash className="h-4 w-4" />
+                <span className="sr-only">Delete</span>
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Input
+                disabled={disabled}
+                value={question.title || ""}
+                onChange={(e) => onUpdate(question.id, { title: e.target.value })}
+                className="h-auto border-transparent bg-transparent px-2 py-1 text-base font-bold shadow-none hover:bg-accent/50 focus-visible:ring-0 focus-visible:bg-transparent disabled:opacity-100 placeholder:text-muted-foreground/60"
+                placeholder="Section Title"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSelect(question.id)
+                }}
+              />
+              <Input
+                disabled={disabled}
+                value={question.description || ""}
+                onChange={(e) => onUpdate(question.id, { description: e.target.value })}
+                className="h-auto border-transparent bg-transparent px-2 py-1 text-sm shadow-none hover:bg-accent/50 focus-visible:ring-0 focus-visible:bg-transparent disabled:opacity-100 text-muted-foreground placeholder:text-muted-foreground/50"
+                placeholder="Section Description (Optional)"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onSelect(question.id)
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   const displayTitle = question.title === "Untitled Question" ? "" : question.title || ""
 

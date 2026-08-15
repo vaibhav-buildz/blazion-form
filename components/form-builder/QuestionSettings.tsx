@@ -100,6 +100,37 @@ export function QuestionSettings({
     handleUpdate({ rules: newRules })
   }
 
+  if (question.type === "section_break") {
+    return (
+      <fieldset disabled={disabled} className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Editing Section Break</h3>
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Section Title</Label>
+            <Input
+              disabled={disabled}
+              value={question.title || ""}
+              onChange={(e) => handleUpdate({ title: e.target.value })}
+              placeholder="Section Title"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Section Description (Optional)</Label>
+            <Textarea
+              disabled={disabled}
+              value={question.description || ""}
+              onChange={(e) => handleUpdate({ description: e.target.value })}
+              placeholder="Add section description..."
+              className="resize-none"
+            />
+          </div>
+        </div>
+      </fieldset>
+    )
+  }
+
   return (
     <fieldset disabled={disabled} className="space-y-6">
       <div>

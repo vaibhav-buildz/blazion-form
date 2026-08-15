@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { QuestionCard, type Question } from "./QuestionCard"
 import { QuestionSettings } from "./QuestionSettings"
-import { Copy, Check, Settings } from "lucide-react"
+import { Copy, Check, Settings, Split } from "lucide-react"
 import { FormSettingsDialog } from "./FormSettingsDialog"
 
 import {
@@ -170,10 +170,11 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
   const handleAddQuestion = async (typeId: string) => {
     if (isLocked) return
     const isOptionsType = ["multiple_choice", "checkbox", "dropdown"].includes(typeId)
+    const defaultTitle = typeId === "section_break" ? "Section Title" : ""
     const newQuestion: Question = {
       id: crypto.randomUUID(),
       type: typeId,
-      title: "",
+      title: defaultTitle,
       description: "",
       required: false,
       position: questions.length,
@@ -191,7 +192,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
         body: JSON.stringify({
           form_id: form.id,
           ...newQuestion,
-          title: "Untitled Question",
+          title: defaultTitle || "Untitled Question",
         }),
       })
     } catch (error) {
@@ -409,6 +410,17 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
                     {type.label}
                   </Button>
                 ))}
+              </div>
+              <div className="pt-4 border-t border-border mt-4">
+                <Button
+                  variant="secondary"
+                  disabled={isLocked}
+                  className="w-full justify-start text-left font-medium border border-border/60 bg-muted/60 hover:bg-muted text-foreground gap-2"
+                  onClick={() => handleAddQuestion("section_break")}
+                >
+                  <Split className="h-4 w-4 text-muted-foreground" />
+                  Section Break
+                </Button>
               </div>
             </div>
           </fieldset>
