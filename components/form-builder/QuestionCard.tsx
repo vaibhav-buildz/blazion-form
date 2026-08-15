@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { Trash, ChevronDown, GripVertical, Split } from "lucide-react"
+import { Trash, ChevronDown, GripVertical, Split, Upload } from "lucide-react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 
@@ -41,6 +41,7 @@ const TYPE_LABELS: Record<string, string> = {
   multiple_choice: "Multiple Choice",
   checkbox: "Checkbox",
   dropdown: "Dropdown",
+  file_upload: "File Upload",
   section_break: "Section Break",
 }
 
@@ -244,6 +245,25 @@ export function QuestionCard({
                   ))}
                 </div>
               )
+            ) : question.type === "file_upload" ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 p-6 text-center">
+                <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  File upload (
+                  {((question.settings?.allowedTypes || ["image/*", "application/pdf", ".doc/.docx"]) as string[])
+                    .map((t: string) =>
+                      t === "image/*"
+                        ? "Image"
+                        : t === "application/pdf"
+                        ? "PDF"
+                        : t === ".doc/.docx"
+                        ? "Document"
+                        : t
+                    )
+                    .join(", ")}{" "}
+                  · max {question.settings?.maxSizeMB ?? 5}MB)
+                </p>
+              </div>
             ) : (
               <Input
                 disabled

@@ -45,6 +45,7 @@ const QUESTION_TYPES = [
   { id: "multiple_choice", label: "Multiple Choice" },
   { id: "checkbox", label: "Checkbox" },
   { id: "dropdown", label: "Dropdown" },
+  { id: "file_upload", label: "File Upload" },
 ]
 
 export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBuilderProps) {
@@ -179,7 +180,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
       required: false,
       position: questions.length,
       options: isOptionsType ? ["Option 1", "Option 2"] : [],
-      settings: {}
+      settings: typeId === "file_upload" ? { allowedTypes: ["image/*", "application/pdf", ".doc/.docx"], maxSizeMB: 5 } : {}
     }
 
     setQuestions((prev) => [...prev, newQuestion])

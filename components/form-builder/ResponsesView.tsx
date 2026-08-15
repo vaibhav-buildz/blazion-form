@@ -42,6 +42,47 @@ interface ResponsesViewProps {
   responses: FormResponse[]
 }
 
+function FileDownloadLink({ path }: { path: string }) {
+  const [loading, setLoading] = React.useState(false)
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!path || loading) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/files/signed-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+      })
+      const data = await res.json()
+      if (res.ok && data.signedUrl) {
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer")
+      } else {
+        alert(data.error || "Failed to generate download link")
+      }
+    } catch (err: any) {
+      console.error("Error fetching signed URL:", err)
+      alert("Error generating download link")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleDownload}
+      disabled={loading}
+      className="h-8 gap-1.5 text-xs text-primary hover:text-primary"
+    >
+      <Download className="h-3.5 w-3.5" />
+      {loading ? "Generating..." : "Download"}
+    </Button>
+  )
+}
+
 export function ResponsesView({ form, questions, responses }: ResponsesViewProps) {
   const handleExportCSV = () => {
     if (!responses || responses.length === 0) return
@@ -163,6 +204,18 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
 
                       {questions.map((q) => {
                         const val = resp.answers?.[q.id]
+                        if (q.type === "file_upload") {
+                          return (
+                            <TableCell key={q.id} className="text-sm">
+                              {val && typeof val === "string" ? (
+                                <FileDownloadLink path={val} />
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                          )
+                        }
+
                         let display = "-"
                         if (Array.isArray(val)) {
                           display = val.length > 0 ? val.join(", ") : "-"
@@ -267,6 +320,45 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                           )
                         })}
                       </div>
+                    </Card>
+                  )
+                }
+
+                if (q.type === "file_upload") {
+                  const fileResponses = responses
+                    .map((r) => r.answers?.[q.id])
+                    .filter((v) => typeof v === "string" && v.trim() !== "")
+
+                  return (
+                    <Card key={q.id} className="p-6 border-border space-y-4">
+                      <div>
+                        <h3 className="text-base font-semibold text-foreground">
+                          {q.title || "Untitled Question"}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {fileResponses.length} file uploads
+                        </p>
+                      </div>
+
+                      {fileResponses.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic">
+                          No files uploaded.
+                        </p>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {fileResponses.map((filePath, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-2.5 rounded-md bg-muted/40 border border-border text-xs text-foreground"
+                            >
+                              <span className="truncate max-w-[200px]">
+                                {filePath.split("/").pop()?.replace(/^\d+-/, "") || "Uploaded file"}
+                              </span>
+                              <FileDownloadLink path={filePath} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </Card>
                   )
                 }

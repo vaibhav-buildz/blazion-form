@@ -249,6 +249,74 @@ export function QuestionSettings({
           </div>
         )}
 
+        {/* File Upload Type */}
+        {question.type === "file_upload" && (
+          <div className="space-y-4">
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Allowed File Types</Label>
+              <div className="space-y-2">
+                {[
+                  { label: "Image", value: "image/*" },
+                  { label: "PDF", value: "application/pdf" },
+                  { label: "Document", value: ".doc/.docx" },
+                ].map((item) => {
+                  const allowedTypes: string[] = question.settings?.allowedTypes || [
+                    "image/*",
+                    "application/pdf",
+                    ".doc/.docx",
+                  ]
+                  const isChecked = allowedTypes.includes(item.value)
+                  return (
+                    <div key={item.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        disabled={disabled}
+                        id={`allowed-${item.value}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          let updated: string[]
+                          if (checked) {
+                            updated = [...allowedTypes, item.value]
+                          } else {
+                            updated = allowedTypes.filter((t) => t !== item.value)
+                          }
+                          handleSettingUpdate("allowedTypes", updated)
+                        }}
+                      />
+                      <Label
+                        htmlFor={`allowed-${item.value}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {item.label}
+                      </Label>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="max-size-mb">Max File Size (MB)</Label>
+              <Input
+                disabled={disabled}
+                id="max-size-mb"
+                type="number"
+                min={1}
+                max={10}
+                value={question.settings?.maxSizeMB ?? 5}
+                onChange={(e) => {
+                  const rawVal = e.target.value ? parseInt(e.target.value, 10) : 5
+                  const cappedVal = Math.min(10, Math.max(1, isNaN(rawVal) ? 5 : rawVal))
+                  handleSettingUpdate("maxSizeMB", cappedVal)
+                }}
+                placeholder="5"
+              />
+              <p className="text-xs text-muted-foreground">
+                Hard limit capped at 10MB maximum per file.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Option Types */}
         {isOptionsType && (
           <div className="space-y-4">

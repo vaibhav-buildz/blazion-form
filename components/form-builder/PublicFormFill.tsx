@@ -16,9 +16,222 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CheckCircle2, Loader2, Lock } from "lucide-react"
+import { createClient } from "@/lib/supabase"
+import { CheckCircle2, Loader2, Lock, Upload, FileText, Trash2 } from "lucide-react"
 
 import { type QuestionRule } from "./QuestionCard"
+
+function formatBytes(bytes: number, decimals = 1) {
+  if (!bytes || bytes === 0) return "0 Bytes"
+  const k = 1024
+  const dm = decimals < 0 ? 0 : decimals
+  const sizes = ["Bytes", "KB", "MB", "GB"]
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
+}
+
+interface FileUploadFieldProps {
+  formId: string
+  question: Question
+  field: any
+}
+
+function FileUploadField({ formId, question, field }: FileUploadFieldProps) {
+  const [isDragging, setIsDragging] = React.useState(false)
+  const [isUploading, setIsUploading] = React.useState(false)
+  const [uploadError, setUploadError] = React.useState<string | null>(null)
+  const [fileDetails, setFileDetails] = React.useState<{ name: string; size: number } | null>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const allowedTypes: string[] = question.settings?.allowedTypes || ["image/*", "application/pdf", ".doc/.docx"]
+  const maxSizeMB: number = question.settings?.maxSizeMB ?? 5
+
+  const acceptString = React.useMemo(() => {
+    return allowedTypes
+      .map((t) => (t === ".doc/.docx" ? ".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" : t))
+      .join(",")
+  }, [allowedTypes])
+
+  const typeLabelsMap: Record<string, string> = {
+    "image/*": "Image",
+    "application/pdf": "PDF",
+    ".doc/.docx": "Document",
+  }
+  const allowedNames = allowedTypes.map((t) => typeLabelsMap[t] || t).join(", ")
+
+  const validateFile = (file: File): string | null => {
+    const maxBytes = maxSizeMB * 1024 * 1024
+    if (file.size > maxBytes) {
+      return `File size exceeds max limit of ${maxSizeMB}MB`
+    }
+
+    if (allowedTypes.length > 0) {
+      const fileNameLower = file.name.toLowerCase()
+      const isAllowed = allowedTypes.some((t) => {
+        if (t === "image/*") return file.type.startsWith("image/")
+        if (t === "application/pdf") return file.type === "application/pdf" || fileNameLower.endsWith(".pdf")
+        if (t === ".doc/.docx") return fileNameLower.endsWith(".doc") || fileNameLower.endsWith(".docx") || file.type.includes("word") || file.type.includes("document")
+        return true
+      })
+
+      if (!isAllowed) {
+        return `Invalid file type. Allowed: ${allowedNames}`
+      }
+    }
+
+    return null
+  }
+
+  const handleUpload = async (file: File) => {
+    setUploadError(null)
+    const err = validateFile(file)
+    if (err) {
+      setUploadError(err)
+      return
+    }
+
+    setIsUploading(true)
+    try {
+      const timestamp = Date.now()
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_")
+      const storagePath = `${formId}/${timestamp}-${sanitizedName}`
+
+      const supabase = createClient()
+      const { error: uploadErr } = await supabase.storage
+        .from("response-files")
+        .upload(storagePath, file, { cacheControl: "3600", upsert: true })
+
+      if (uploadErr) {
+        throw new Error(uploadErr.message || "Upload failed")
+      }
+
+      setFileDetails({ name: file.name, size: file.size })
+      field.onChange(storagePath)
+    } catch (error: any) {
+      console.error("Storage upload error:", error)
+      setUploadError(error.message || "Failed to upload file. Please try again.")
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleUpload(file)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      handleUpload(file)
+    }
+  }
+
+  const handleRemove = () => {
+    field.onChange("")
+    setFileDetails(null)
+    setUploadError(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  const storedPath = field.value
+  const hasFile = Boolean(storedPath)
+
+  if (hasFile) {
+    const displayName = fileDetails?.name || storedPath.split("/").pop()?.replace(/^\d+-/, "") || "Uploaded File"
+    return (
+      <div className="flex items-center justify-between p-3.5 rounded-lg border border-border bg-card shadow-sm">
+        <div className="flex items-center space-x-3 truncate">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <FileText className="h-5 w-5" />
+          </div>
+          <div className="truncate">
+            <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
+            {fileDetails && (
+              <p className="text-xs text-muted-foreground">{formatBytes(fileDetails.size)}</p>
+            )}
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleRemove}
+          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 ml-2"
+        >
+          <Trash2 className="h-4 w-4 mr-1" /> Remove
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => !isUploading && fileInputRef.current?.click()}
+        className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center transition-colors cursor-pointer ${
+          isDragging
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-primary/50 hover:bg-accent/40 bg-muted/20"
+        } ${isUploading ? "opacity-60 pointer-events-none" : ""}`}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept={acceptString}
+          onChange={handleFileChange}
+          className="hidden"
+          disabled={isUploading}
+        />
+
+        {isUploading ? (
+          <div className="flex flex-col items-center justify-center space-y-2 py-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm font-medium text-foreground">Uploading file...</p>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center space-y-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary mb-1">
+              <Upload className="h-6 w-6" />
+            </div>
+            <p className="text-sm font-medium text-foreground">
+              <span className="text-primary underline font-semibold">Click to upload</span> or drag and drop
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {allowedNames ? `${allowedNames} ` : ""}up to {maxSizeMB}MB
+            </p>
+          </div>
+        )}
+      </div>
+
+      {uploadError && (
+        <p className="text-xs font-medium text-destructive">{uploadError}</p>
+      )}
+    </div>
+  )
+}
 
 export interface Question {
   id: string
@@ -512,6 +725,13 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                           return true
                         }
 
+                        case "file_upload": {
+                          if (question.required && (!value || typeof value !== "string" || !value.trim())) {
+                            return "This question is required"
+                          }
+                          return true
+                        }
+
                         default: {
                           if (question.required && !value) {
                             return "This question is required"
@@ -721,6 +941,15 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                               ))}
                             </SelectContent>
                           </Select>
+                        )
+
+                      case "file_upload":
+                        return (
+                          <FileUploadField
+                            formId={form.id}
+                            question={question}
+                            field={field}
+                          />
                         )
 
                       default:

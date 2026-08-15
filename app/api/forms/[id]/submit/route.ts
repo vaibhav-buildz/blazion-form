@@ -87,6 +87,63 @@ export async function POST(
     }
 
     console.log("SUCCESSFULLY INSERTED RESPONSE:", response)
+
+    // Insert corresponding rows into file_uploads table for file_upload questions
+    if (response?.id) {
+      try {
+        const { data: questions } = await supabase
+          .from("questions")
+          .select("id, type")
+          .eq("form_id", form.id)
+
+        const fileUploadQuestions = (questions || []).filter(
+          (q: any) => q.type === "file_upload"
+        )
+
+        for (const q of fileUploadQuestions) {
+          const storagePath = answers[q.id]
+          if (typeof storagePath === "string" && storagePath.trim()) {
+            const pathParts = storagePath.split("/")
+            const fileNameRaw = pathParts.pop() || ""
+            const fileName = fileNameRaw.replace(/^\d+-/, "") || fileNameRaw
+            let fileSize = 0
+
+            try {
+              const folder = pathParts.join("/")
+              const { data: files } = await supabase.storage
+                .from("response-files")
+                .list(folder, { search: fileNameRaw })
+
+              const matchingFile = files?.find((f) => f.name === fileNameRaw)
+              if (matchingFile?.metadata?.size) {
+                fileSize = matchingFile.metadata.size
+              }
+            } catch (err) {
+              console.error("Error fetching file size from storage:", err)
+            }
+
+            const { error: fileInsertError } = await supabase
+              .from("file_uploads")
+              .insert([
+                {
+                  response_id: response.id,
+                  question_id: q.id,
+                  storage_path: storagePath,
+                  file_name: fileName,
+                  file_size: fileSize,
+                },
+              ])
+
+            if (fileInsertError) {
+              console.error("Supabase insert error for file_uploads:", fileInsertError)
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error processing file_uploads on submit:", err)
+      }
+    }
+
     return NextResponse.json({ success: true, responseId: response?.id })
 
   } catch (error: any) {
