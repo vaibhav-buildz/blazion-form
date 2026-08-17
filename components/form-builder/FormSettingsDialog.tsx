@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Clock, Lock, ShieldAlert, Loader2 } from "lucide-react"
+import { Clock, Lock, ShieldAlert, Loader2, Mail } from "lucide-react"
 
 interface FormSettingsDialogProps {
   form: {
@@ -69,6 +69,11 @@ export function FormSettingsDialog({
   const [passwordInput, setPasswordInput] = React.useState<string>("")
   const [isSaving, setIsSaving] = React.useState(false)
 
+  // Email Notification state
+  const [notifyOnResponse, setNotifyOnResponse] = React.useState<boolean>(
+    currentSettings.notify_on_response !== false
+  )
+
   // Sync state when dialog opens
   React.useEffect(() => {
     if (open) {
@@ -96,6 +101,8 @@ export function FormSettingsDialog({
       const hasHash = Boolean(settings.password_hash)
       setEnablePassword(hasHash)
       setPasswordInput("")
+
+      setNotifyOnResponse(settings.notify_on_response !== false)
     }
   }, [open, form.settings])
 
@@ -139,6 +146,7 @@ export function FormSettingsDialog({
       const payloadSettings: Record<string, any> = {
         expires_at: finalExpiresAt,
         response_limit: limitNum && !isNaN(limitNum) && limitNum > 0 ? limitNum : null,
+        notify_on_response: notifyOnResponse,
       }
 
       if (enablePassword) {
@@ -187,7 +195,7 @@ export function FormSettingsDialog({
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Form Settings</DialogTitle>
           <DialogDescription>
-            Configure optional access rules, expiry date, and response limits.
+            Configure optional access rules, expiry date, response limits, and email notifications.
           </DialogDescription>
         </DialogHeader>
 
@@ -258,7 +266,7 @@ export function FormSettingsDialog({
           </div>
 
           {/* C) Password Protection */}
-          <div className="space-y-3">
+          <div className="space-y-3 border-b border-border pb-4">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="password-toggle"
@@ -294,6 +302,26 @@ export function FormSettingsDialog({
                 )}
               </div>
             )}
+          </div>
+
+          {/* D) Email Notifications */}
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="notify-email-toggle"
+                checked={notifyOnResponse}
+                onCheckedChange={(checked) => setNotifyOnResponse(Boolean(checked))}
+              />
+              <Label
+                htmlFor="notify-email-toggle"
+                className="text-sm font-semibold cursor-pointer flex items-center gap-1.5"
+              >
+                <Mail className="h-4 w-4 text-muted-foreground" /> Notify me by email when someone responds
+              </Label>
+            </div>
+            <p className="pl-6 text-xs text-muted-foreground">
+              Receive an email summary whenever a respondent submits this form.
+            </p>
           </div>
         </div>
 

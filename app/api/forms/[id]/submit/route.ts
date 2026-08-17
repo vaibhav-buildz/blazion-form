@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr"
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
+import { resend } from "@/lib/email/resend"
+import { generateNotificationEmail } from "@/lib/email/notification-template"
 
 export async function POST(
   req: Request,
@@ -35,7 +38,7 @@ export async function POST(
 
     let formQuery = supabase
       .from("forms")
-      .select("id, status")
+      .select("id, title, user_id, settings, status")
       .eq("status", "published")
 
     if (isUuid) {
@@ -142,6 +145,107 @@ export async function POST(
       } catch (err) {
         console.error("Error processing file_uploads on submit:", err)
       }
+    }
+
+    // Send email notification to form owner if enabled
+    try {
+      const notifyOnResponse = form.settings?.notify_on_response !== false
+      if (notifyOnResponse && form.user_id) {
+        // Fetch form owner's email
+        const serviceRoleKey =
+          process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        const supabaseAdmin = createSupabaseAdminClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          serviceRoleKey!
+        )
+
+        let ownerEmail: string | null = null
+        try {
+          const { data: userData, error: userError } =
+            await supabaseAdmin.auth.admin.getUserById(form.user_id)
+          if (userData?.user?.email) {
+            ownerEmail = userData.user.email
+          } else if (userError) {
+            console.error("Error fetching user email via getUserById:", userError)
+          }
+        } catch (adminErr) {
+          console.error("Exception fetching form owner user via admin:", adminErr)
+        }
+
+        // Fallback to org_profiles contact_email if getUserById didn't yield an email
+        if (!ownerEmail) {
+          try {
+            const { data: profile } = await supabase
+              .from("org_profiles")
+              .select("contact_email")
+              .eq("user_id", form.user_id)
+              .maybeSingle()
+            if (profile?.contact_email) {
+              ownerEmail = profile.contact_email
+            }
+          } catch (profErr) {
+            console.error("Error fetching profile contact_email fallback:", profErr)
+          }
+        }
+
+        if (ownerEmail) {
+          // Fetch questions to build answersSummary
+          const { data: formQuestions } = await supabase
+            .from("questions")
+            .select("id, type, title, position")
+            .eq("form_id", form.id)
+            .order("position", { ascending: true })
+
+          const answersSummary: Array<{ question: string; answer: string }> = []
+          if (formQuestions && Array.isArray(formQuestions)) {
+            for (const q of formQuestions) {
+              if (q.type === "section_break") continue
+              const ansVal = answers[q.id]
+              if (ansVal !== undefined && ansVal !== null && ansVal !== "") {
+                let formattedAns = ""
+                if (Array.isArray(ansVal)) {
+                  formattedAns = ansVal.join(", ")
+                } else if (typeof ansVal === "object") {
+                  formattedAns = JSON.stringify(ansVal)
+                } else {
+                  formattedAns = String(ansVal)
+                }
+                answersSummary.push({
+                  question: q.title || "Untitled Question",
+                  answer: formattedAns,
+                })
+              }
+            }
+          }
+
+          const origin = new URL(req.url).origin
+          const responseUrl = `${origin}/dashboard/forms/${form.id}/responses`
+          const submittedAt = new Date().toLocaleString("en-US", {
+            dateStyle: "medium",
+            timeStyle: "short",
+          })
+
+          const html = generateNotificationEmail({
+            formTitle: form.title || "Untitled Form",
+            submittedAt,
+            answersSummary,
+            responseUrl,
+          })
+
+          const emailResult = await resend.emails.send({
+            from: "Blazion Form <onboarding@resend.dev>",
+            to: [ownerEmail],
+            subject: `New response to "${form.title || "Untitled Form"}"`,
+            html,
+          })
+          console.log("Email notification sent successfully:", emailResult)
+        } else {
+          console.warn("Could not find owner email for form submission notification:", form.user_id)
+        }
+      }
+    } catch (emailErr) {
+      console.error("Failed to send response notification email:", emailErr)
     }
 
     return NextResponse.json({ success: true, responseId: response?.id })
