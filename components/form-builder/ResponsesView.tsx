@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
@@ -13,7 +13,15 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table"
-import { Download, ArrowLeft, Inbox } from "lucide-react"
+import {
+  Download,
+  ChevronLeft,
+  Inbox,
+  FileText,
+  Table as TableIcon,
+  BarChart3,
+  MessageSquare,
+} from "lucide-react"
 
 interface Question {
   id: string
@@ -40,6 +48,32 @@ interface ResponsesViewProps {
   }
   questions: Question[]
   responses: FormResponse[]
+}
+
+function formatDate(dateStr?: string): string {
+  if (!dateStr) return "-"
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return "-"
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })
+}
+
+function getTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    short_text: "Short Text",
+    long_text: "Long Text",
+    multiple_choice: "Multiple Choice",
+    checkbox: "Checkbox",
+    dropdown: "Dropdown",
+    file_upload: "File Upload",
+    section_break: "Section Break",
+  }
+  return map[type] || type
 }
 
 function FileDownloadLink({ path }: { path: string }) {
@@ -69,27 +103,36 @@ function FileDownloadLink({ path }: { path: string }) {
     }
   }
 
+  const fileName = path.split("/").pop()?.replace(/^\d+-/, "") || "File"
+
   return (
     <Button
       variant="outline"
       size="sm"
       onClick={handleDownload}
       disabled={loading}
-      className="h-8 gap-1.5 text-xs text-primary hover:text-primary"
+      className="h-8 px-2.5 gap-1.5 text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 border-primary/20 shrink-0"
+      title={fileName}
     >
-      <Download className="h-3.5 w-3.5" />
-      {loading ? "Generating..." : "Download"}
+      <FileText className="h-3.5 w-3.5" />
+      <span className="max-w-[120px] truncate">{loading ? "Loading..." : fileName}</span>
+      <Download className="h-3 w-3 ml-0.5 opacity-70" />
     </Button>
   )
 }
 
 export function ResponsesView({ form, questions, responses }: ResponsesViewProps) {
+  const printableQuestions = React.useMemo(
+    () => questions.filter((q) => q.type !== "section_break"),
+    [questions]
+  )
+
   const handleExportCSV = () => {
     if (!responses || responses.length === 0) return
 
     const headers = [
       "Submitted At",
-      ...questions.map(
+      ...printableQuestions.map(
         (q) => `"${(q.title || "Untitled Question").replace(/"/g, '""')}"`
       ),
     ]
@@ -97,8 +140,7 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
     const rows = responses.map((resp) => {
       const dateStr = resp.submitted_at || resp.created_at
       const submittedAt = dateStr ? new Date(dateStr).toLocaleString() : "-"
-      const answers = questions.map((q) => {
-
+      const answers = printableQuestions.map((q) => {
         const val = resp.answers?.[q.id]
         let formatted = ""
         if (Array.isArray(val)) {
@@ -125,134 +167,191 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
 
   return (
     <div className="min-h-screen bg-background p-8 space-y-6 max-w-6xl mx-auto">
-      {/* Top Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6">
-        <div className="space-y-1">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center text-xs font-medium text-muted-foreground hover:text-foreground gap-1 mb-2"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
+      {/* Top Header Section */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="mb-4 -ml-2 text-muted-foreground hover:text-foreground gap-1.5 font-medium"
+        >
+          <Link href="/dashboard">
+            <ChevronLeft className="h-4 w-4" />
+            Back to Dashboard
           </Link>
+        </Button>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-border">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
               {form.title || "Untitled Form"}
             </h1>
-            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary border border-primary/20">
               {responses.length} {responses.length === 1 ? "Response" : "Responses"}
             </span>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
             disabled={responses.length === 0}
-            className="gap-1.5 text-xs"
+            className="gap-1.5 text-xs font-semibold shrink-0"
           >
-            <Download className="h-3.5 w-3.5" /> Export CSV
+            <Download className="h-4 w-4" />
+            Export CSV
           </Button>
         </div>
       </div>
 
-      {/* Main Tabs Container */}
+      {/* Main Content Tabs */}
       <Tabs defaultValue="table" className="space-y-6">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="table">Table View</TabsTrigger>
-            <TabsTrigger value="summary">Summary View</TabsTrigger>
+        <div className="inline-flex bg-muted/40 p-1.5 rounded-xl border border-border/50">
+          <TabsList className="bg-transparent p-0 gap-1 h-auto">
+            <TabsTrigger
+              value="table"
+              className="data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground hover:text-foreground gap-2"
+            >
+              <TableIcon className="h-4 w-4" />
+              Table View
+            </TabsTrigger>
+            <TabsTrigger
+              value="summary"
+              className="data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground hover:text-foreground gap-2"
+            >
+              <BarChart3 className="h-4 w-4" />
+              Summary View
+            </TabsTrigger>
           </TabsList>
         </div>
 
         {/* TABLE VIEW */}
         <TabsContent value="table" className="space-y-4">
           {responses.length === 0 ? (
-            <Card className="p-12 text-center border-dashed border-2 border-border bg-card">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-4">
-                <Inbox className="h-6 w-6" />
+            <Card className="border-2 border-dashed border-border rounded-2xl p-16 text-center bg-card shadow-sm">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted/50 text-muted-foreground mb-4">
+                <Inbox className="h-8 w-8 text-muted-foreground/60" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">
+              <h3 className="text-xl font-bold text-foreground mb-1">
                 No responses yet
               </h3>
-              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
                 Share your form link to start collecting responses from users.
               </p>
             </Card>
           ) : (
-            <Card className="border-border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-44 font-semibold">Submitted At</TableHead>
-                    {questions.map((q) => (
-                      <TableHead key={q.id} className="min-w-44 font-semibold">
-                        {q.title || "Untitled Question"}
+            <Card className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/50 backdrop-blur-sm sticky top-0 border-b border-border z-10">
+                    <TableRow className="hover:bg-transparent border-border">
+                      <TableHead className="w-44 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                        Submitted At
                       </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {responses.map((resp) => (
-                    <TableRow key={resp.id}>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap" suppressHydrationWarning>
-                        {resp.submitted_at || resp.created_at
-                          ? new Date(resp.submitted_at || resp.created_at!).toLocaleString("en-US")
-                          : "-"}
-                      </TableCell>
+                      {printableQuestions.map((q) => (
+                        <TableHead
+                          key={q.id}
+                          className="min-w-[180px] max-w-[300px] font-semibold text-[11px] uppercase tracking-wider text-muted-foreground py-3.5 px-4"
+                        >
+                          {q.title || "Untitled Question"}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {responses.map((resp) => (
+                      <TableRow
+                        key={resp.id}
+                        className="even:bg-muted/20 hover:bg-muted/40 transition-colors border-border"
+                      >
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3.5 px-4 font-mono">
+                          {formatDate(resp.submitted_at || resp.created_at)}
+                        </TableCell>
 
-                      {questions.map((q) => {
-                        const val = resp.answers?.[q.id]
-                        if (q.type === "file_upload") {
+                        {printableQuestions.map((q) => {
+                          const val = resp.answers?.[q.id]
+
+                          if (q.type === "file_upload") {
+                            return (
+                              <TableCell key={q.id} className="py-3.5 px-4 text-sm">
+                                {val && typeof val === "string" && val.trim() ? (
+                                  <FileDownloadLink path={val} />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground/60 italic">—</span>
+                                )}
+                              </TableCell>
+                            )
+                          }
+
+                          if (Array.isArray(val)) {
+                            if (val.length === 0) {
+                              return (
+                                <TableCell key={q.id} className="py-3.5 px-4 text-sm">
+                                  <span className="text-xs text-muted-foreground/60 italic">—</span>
+                                </TableCell>
+                              )
+                            }
+                            return (
+                              <TableCell key={q.id} className="py-3.5 px-4 text-sm">
+                                <div className="flex flex-wrap gap-1">
+                                  {val.map((item, i) => (
+                                    <span
+                                      key={i}
+                                      className="inline-flex items-center rounded-md bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium border border-border/50"
+                                    >
+                                      {String(item)}
+                                    </span>
+                                  ))}
+                                </div>
+                              </TableCell>
+                            )
+                          }
+
+                          const displayStr =
+                            val !== undefined && val !== null && val !== ""
+                              ? String(val)
+                              : ""
                           return (
-                            <TableCell key={q.id} className="text-sm">
-                              {val && typeof val === "string" ? (
-                                <FileDownloadLink path={val} />
+                            <TableCell key={q.id} className="py-3.5 px-4 text-sm">
+                              {displayStr ? (
+                                <span
+                                  className="block max-w-[260px] truncate text-foreground text-sm"
+                                  title={displayStr}
+                                >
+                                  {displayStr}
+                                </span>
                               ) : (
-                                <span className="text-muted-foreground">-</span>
+                                <span className="text-xs text-muted-foreground/60 italic">—</span>
                               )}
                             </TableCell>
                           )
-                        }
-
-                        let display = "-"
-                        if (Array.isArray(val)) {
-                          display = val.length > 0 ? val.join(", ") : "-"
-                        } else if (val !== undefined && val !== null && val !== "") {
-                          display = String(val)
-                        }
-                        return (
-                          <TableCell key={q.id} className="text-sm">
-                            {display}
-                          </TableCell>
-                        )
-                      })}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           )}
         </TabsContent>
 
         {/* SUMMARY VIEW */}
-        <TabsContent value="summary" className="space-y-6">
+        <TabsContent value="summary" className="space-y-4">
           {responses.length === 0 ? (
-            <Card className="p-12 text-center border-dashed border-2 border-border bg-card">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground mb-4">
-                <Inbox className="h-6 w-6" />
+            <Card className="border-2 border-dashed border-border rounded-2xl p-16 text-center bg-card shadow-sm">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-muted/50 text-muted-foreground mb-4">
+                <Inbox className="h-8 w-8 text-muted-foreground/60" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-1">
+              <h3 className="text-xl font-bold text-foreground mb-1">
                 No responses yet
               </h3>
-              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
                 Share your form link to start collecting responses from users.
               </p>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {questions.map((q) => {
+            <div className="space-y-4">
+              {printableQuestions.map((q) => {
                 const isOptionType = [
                   "multiple_choice",
                   "checkbox",
@@ -282,17 +381,27 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                     q.type === "checkbox" ? responses.length : totalAnswersCount
 
                   return (
-                    <Card key={q.id} className="p-6 border-border space-y-4">
-                      <div>
-                        <h3 className="text-base font-semibold text-foreground">
-                          {q.title || "Untitled Question"}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {options.length} options · {responses.length} responses
-                        </p>
+                    <Card
+                      key={q.id}
+                      className="p-6 border border-border rounded-xl bg-card shadow-sm space-y-5"
+                    >
+                      <div className="flex items-center justify-between gap-4 pb-2 border-b border-border/40">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2.5">
+                            <h3 className="text-lg font-semibold text-foreground">
+                              {q.title || "Untitled Question"}
+                            </h3>
+                            <span className="bg-muted text-muted-foreground text-[11px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-border/50">
+                              {getTypeLabel(q.type)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {options.length} options · {responses.length} total responses
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="space-y-3 pt-1">
                         {options.map((opt, idx) => {
                           const count = counts[opt] || 0
                           const pct =
@@ -301,18 +410,16 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                               : 0
 
                           return (
-                            <div key={idx} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-medium text-foreground">
-                                  {opt}
-                                </span>
-                                <span className="text-muted-foreground font-mono">
+                            <div key={idx} className="space-y-1.5">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="font-medium text-foreground">{opt}</span>
+                                <span className="font-semibold text-xs text-primary">
                                   {count} ({pct}%)
                                 </span>
                               </div>
-                              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                              <div className="h-2.5 w-full rounded-full bg-primary/10 overflow-hidden">
                                 <div
-                                  className="h-full bg-primary transition-all duration-300"
+                                  className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                                   style={{ width: `${pct}%` }}
                                 />
                               </div>
@@ -330,28 +437,41 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                     .filter((v) => typeof v === "string" && v.trim() !== "")
 
                   return (
-                    <Card key={q.id} className="p-6 border-border space-y-4">
-                      <div>
-                        <h3 className="text-base font-semibold text-foreground">
-                          {q.title || "Untitled Question"}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {fileResponses.length} file uploads
-                        </p>
+                    <Card
+                      key={q.id}
+                      className="p-6 border border-border rounded-xl bg-card shadow-sm space-y-5"
+                    >
+                      <div className="flex items-center justify-between gap-4 pb-2 border-b border-border/40">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2.5">
+                            <h3 className="text-lg font-semibold text-foreground">
+                              {q.title || "Untitled Question"}
+                            </h3>
+                            <span className="bg-muted text-muted-foreground text-[11px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-border/50">
+                              {getTypeLabel(q.type)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {fileResponses.length} {fileResponses.length === 1 ? "file" : "files"} uploaded
+                          </p>
+                        </div>
                       </div>
 
                       {fileResponses.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic">
+                        <p className="text-xs text-muted-foreground italic py-2">
                           No files uploaded.
                         </p>
                       ) : (
-                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1">
                           {fileResponses.map((filePath, idx) => (
                             <div
                               key={idx}
-                              className="flex items-center justify-between p-2.5 rounded-md bg-muted/40 border border-border text-xs text-foreground"
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border text-xs text-foreground"
                             >
-                              <span className="truncate max-w-[200px]">
+                              <span
+                                className="truncate max-w-[180px] font-medium"
+                                title={filePath.split("/").pop()?.replace(/^\d+-/, "")}
+                              >
                                 {filePath.split("/").pop()?.replace(/^\d+-/, "") || "Uploaded file"}
                               </span>
                               <FileDownloadLink path={filePath} />
@@ -363,34 +483,45 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                   )
                 }
 
-                // Text Questions Summary
+                // Text Questions (short_text / long_text)
                 const textResponses = responses
                   .map((r) => r.answers?.[q.id])
-                  .filter((v) => v !== undefined && v !== null && v !== "")
+                  .filter((v) => v !== undefined && v !== null && String(v).trim() !== "")
 
                 return (
-                  <Card key={q.id} className="p-6 border-border space-y-4">
-                    <div>
-                      <h3 className="text-base font-semibold text-foreground">
-                        {q.title || "Untitled Question"}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {textResponses.length} text responses
-                      </p>
+                  <Card
+                    key={q.id}
+                    className="p-6 border border-border rounded-xl bg-card shadow-sm space-y-5"
+                  >
+                    <div className="flex items-center justify-between gap-4 pb-2 border-b border-border/40">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                          <h3 className="text-lg font-semibold text-foreground">
+                            {q.title || "Untitled Question"}
+                          </h3>
+                          <span className="bg-muted text-muted-foreground text-[11px] font-medium px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-border/50">
+                            {getTypeLabel(q.type)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MessageSquare className="h-3.5 w-3.5 text-muted-foreground/70 inline" />
+                          {textResponses.length} {textResponses.length === 1 ? "response" : "responses"}
+                        </p>
+                      </div>
                     </div>
 
                     {textResponses.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">
+                      <p className="text-xs text-muted-foreground italic py-2">
                         No text answers submitted.
                       </p>
                     ) : (
-                      <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
                         {textResponses.map((text, idx) => (
                           <div
                             key={idx}
-                            className="p-2.5 rounded-md bg-muted/40 border border-border text-xs text-foreground"
+                            className="p-3.5 rounded-lg bg-muted/30 border border-border/60 border-l-4 border-l-primary/60 text-sm text-foreground leading-relaxed italic"
                           >
-                            {String(text)}
+                            &ldquo;{String(text)}&rdquo;
                           </div>
                         ))}
                       </div>
