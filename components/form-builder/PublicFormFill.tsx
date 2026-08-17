@@ -358,6 +358,88 @@ export function parseSections(questions: Question[]): FormSection[] {
   return sections
 }
 
+export function validateQuestion(question: Question, answers: Record<string, any>): string | null {
+  if (question.type === "section_break" || !evaluateRules(question, answers)) {
+    return null
+  }
+
+  // Non-required questions MUST NEVER fail validation or block navigation/submission
+  if (!question.required) {
+    return null
+  }
+
+  const value = answers[question.id]
+
+  switch (question.type) {
+    case "short_text":
+    case "long_text": {
+      const strVal = typeof value === "string" ? value.trim() : ""
+      const rawLen = typeof value === "string" ? value.length : 0
+
+      if (!strVal) {
+        return "This question is required"
+      }
+
+      const minChars = question.settings?.minChars ?? question.settings?.min_chars
+      if (minChars && typeof minChars === "number" && minChars > 0 && rawLen < minChars) {
+        return `Minimum ${minChars} characters required`
+      }
+
+      const maxChars =
+        question.settings?.maxChars ??
+        question.settings?.maxCharacterCount ??
+        question.settings?.max_chars
+      if (maxChars && typeof maxChars === "number" && maxChars > 0 && rawLen > maxChars) {
+        return `Maximum ${maxChars} characters allowed`
+      }
+
+      return null
+    }
+
+    case "multiple_choice":
+    case "dropdown": {
+      const strVal = typeof value === "string" ? value.trim() : ""
+      if (!strVal) {
+        return "Please select an option"
+      }
+      return null
+    }
+
+    case "checkbox": {
+      const arr = Array.isArray(value) ? value : []
+      const min = question.settings?.minSelect
+      const max = question.settings?.maxSelect
+
+      const requiredMin = min && typeof min === "number" && min > 0 ? min : 1
+      if (arr.length < requiredMin) {
+        return requiredMin === 1
+          ? "Please select at least 1 option"
+          : `Please select at least ${requiredMin} options`
+      }
+
+      if (max && typeof max === "number" && max > 0 && arr.length > max) {
+        return `Please select at most ${max} options`
+      }
+
+      return null
+    }
+
+    case "file_upload": {
+      if (!value || typeof value !== "string" || !value.trim()) {
+        return "This question is required"
+      }
+      return null
+    }
+
+    default: {
+      if (!value || (typeof value === "string" && !value.trim())) {
+        return "This question is required"
+      }
+      return null
+    }
+  }
+}
+
 export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   const [submitted, setSubmitted] = React.useState(false)
   const [submitError, setSubmitError] = React.useState<string | null>(null)
@@ -381,7 +463,8 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     handleSubmit,
     setValue,
     watch,
-    trigger,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<Record<string, any>>({
     mode: "onChange",
@@ -395,14 +478,30 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
 
   const answers = watch()
 
-  const handleNextSection = async () => {
-    const visibleQuestionsInCurrentSection = currentSection.questions.filter((q) =>
-      evaluateRules(q, answers)
-    )
-    const fieldNamesToValidate = visibleQuestionsInCurrentSection.map((q) => q.id)
+  const handleNextSection = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
 
-    const isValid = fieldNamesToValidate.length > 0 ? await trigger(fieldNamesToValidate) : true
-    if (isValid) {
+    const currentAnswers = watch()
+    let hasSectionError = false
+
+    const visibleQuestionsInCurrentSection = currentSection.questions.filter((q) =>
+      evaluateRules(q, currentAnswers)
+    )
+
+    visibleQuestionsInCurrentSection.forEach((q) => {
+      const err = validateQuestion(q, currentAnswers)
+      if (err) {
+        setError(q.id, { type: "manual", message: err })
+        hasSectionError = true
+      } else {
+        clearErrors(q.id)
+      }
+    })
+
+    if (!hasSectionError) {
       setCurrentSectionIndex((prev) => Math.min(totalSections - 1, prev + 1))
       if (typeof window !== "undefined") {
         window.scrollTo({ top: 0, behavior: "smooth" })
@@ -509,6 +608,41 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   }
 
   const onSubmit = async (data: Record<string, any>) => {
+    if (safeSectionIndex < totalSections - 1) {
+      return
+    }
+
+    let firstErrorSectionIndex = -1
+    let hasAnyError = false
+
+    questions.forEach((q) => {
+      if (q.type !== "section_break" && evaluateRules(q, data)) {
+        const err = validateQuestion(q, data)
+        if (err) {
+          setError(q.id, { type: "manual", message: err })
+          hasAnyError = true
+          if (firstErrorSectionIndex === -1) {
+            const secIdx = sections.findIndex((sec) =>
+              sec.questions.some((item) => item.id === q.id)
+            )
+            if (secIdx !== -1) {
+              firstErrorSectionIndex = secIdx
+            }
+          }
+        }
+      }
+    })
+
+    if (hasAnyError) {
+      if (firstErrorSectionIndex !== -1) {
+        setCurrentSectionIndex(firstErrorSectionIndex)
+        if (typeof window !== "undefined") {
+          window.scrollTo({ top: 0, behavior: "smooth" })
+        }
+      }
+      return
+    }
+
     // Filter out answers for hidden questions or section_break items
     const visibleAnswers: Record<string, any> = {}
     questions.forEach((q) => {
@@ -620,7 +754,25 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
         )}
 
         {/* Questions Form */}
-        <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-6">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (safeSectionIndex < totalSections - 1) {
+              return
+            }
+            handleSubmit(onSubmit, onError)(e)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && safeSectionIndex < totalSections - 1) {
+              const target = e.target as HTMLElement
+              if (target.tagName !== "TEXTAREA") {
+                e.preventDefault()
+                handleNextSection()
+              }
+            }
+          }}
+          className="space-y-6"
+        >
 
           {currentSection.questions.map((question) => {
             if (!evaluateRules(question, answers)) {
@@ -652,95 +804,11 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
                     name={question.id}
                     control={control}
                     rules={{
-                      validate: (value) => {
-                        if (!evaluateRules(question, answers)) {
-                          return true
-                        }
-                        switch (question.type) {
-                        case "short_text":
-                        case "long_text": {
-                          const strVal = typeof value === "string" ? value.trim() : ""
-                          const rawLen = typeof value === "string" ? value.length : 0
-
-                          if (question.required && !strVal) {
-                            return "This question is required"
-                          }
-
-                          const minChars =
-                            question.settings?.minChars ??
-                            question.settings?.min_chars
-                          if (
-                            minChars &&
-                            typeof minChars === "number" &&
-                            minChars > 0 &&
-                            rawLen < minChars
-                          ) {
-                            return `Minimum ${minChars} characters required`
-                          }
-
-                          const maxChars =
-                            question.settings?.maxChars ??
-                            question.settings?.maxCharacterCount ??
-                            question.settings?.max_chars
-                          if (
-                            maxChars &&
-                            typeof maxChars === "number" &&
-                            maxChars > 0 &&
-                            rawLen > maxChars
-                          ) {
-                            return `Maximum ${maxChars} characters allowed`
-                          }
-
-                          return true
-                        }
-
-
-                        case "multiple_choice":
-                        case "dropdown": {
-                          const strVal = typeof value === "string" ? value.trim() : ""
-                          if (question.required && !strVal) {
-                            return "Please select an option"
-                          }
-                          return true
-                        }
-
-                        case "checkbox": {
-                          const arr = Array.isArray(value) ? value : []
-                          const min = question.settings?.minSelect
-                          const max = question.settings?.maxSelect
-
-                          if (question.required || (min && min > 0)) {
-                            const requiredMin = min && min > 0 ? min : 1
-                            if (arr.length < requiredMin) {
-                              return requiredMin === 1
-                                ? "Please select at least 1 option"
-                                : `Please select at least ${requiredMin} options`
-                            }
-                          }
-
-                          if (max && max > 0 && arr.length > max) {
-                            return `Please select at most ${max} options`
-                          }
-
-                          return true
-                        }
-
-                        case "file_upload": {
-                          if (question.required && (!value || typeof value !== "string" || !value.trim())) {
-                            return "This question is required"
-                          }
-                          return true
-                        }
-
-                        default: {
-                          if (question.required && !value) {
-                            return "This question is required"
-                          }
-                          return true
-                        }
-                      }
-                    },
-                  }}
+                      validate: (val) => {
+                        const err = validateQuestion(question, { ...answers, [question.id]: val })
+                        return err || true
+                      },
+                    }}
 
                   render={({ field }) => {
                     switch (question.type) {
