@@ -241,17 +241,17 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
             </Card>
           ) : (
             <Card className="border border-border rounded-xl overflow-hidden bg-card shadow-sm">
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="overflow-x-auto w-full">
+                <Table className="min-w-full">
                   <TableHeader className="bg-muted/50 backdrop-blur-sm sticky top-0 border-b border-border z-10">
                     <TableRow className="hover:bg-transparent border-border">
-                      <TableHead className="w-44 font-semibold text-[11px] uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                      <TableHead className="w-48 min-w-[180px] font-semibold text-[11px] uppercase tracking-wider text-muted-foreground py-3.5 px-4">
                         Submitted At
                       </TableHead>
                       {printableQuestions.map((q) => (
                         <TableHead
                           key={q.id}
-                          className="min-w-[180px] max-w-[300px] font-semibold text-[11px] uppercase tracking-wider text-muted-foreground py-3.5 px-4"
+                          className="min-w-[200px] max-w-[320px] font-semibold text-[11px] uppercase tracking-wider text-muted-foreground py-3.5 px-4 last:pr-6"
                         >
                           {q.title || "Untitled Question"}
                         </TableHead>
@@ -264,7 +264,7 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                         key={resp.id}
                         className="even:bg-muted/20 hover:bg-muted/40 transition-colors border-border"
                       >
-                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3.5 px-4 font-mono">
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3.5 px-4 font-mono align-top">
                           {formatDate(resp.submitted_at || resp.created_at)}
                         </TableCell>
 
@@ -273,7 +273,7 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
 
                           if (q.type === "file_upload") {
                             return (
-                              <TableCell key={q.id} className="py-3.5 px-4 text-sm">
+                              <TableCell key={q.id} className="min-w-[200px] max-w-[320px] py-3.5 px-4 text-sm align-top last:pr-6">
                                 {val && typeof val === "string" && val.trim() ? (
                                   <FileDownloadLink path={val} />
                                 ) : (
@@ -286,18 +286,18 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                           if (Array.isArray(val)) {
                             if (val.length === 0) {
                               return (
-                                <TableCell key={q.id} className="py-3.5 px-4 text-sm">
+                                <TableCell key={q.id} className="min-w-[200px] max-w-[320px] py-3.5 px-4 text-sm align-top last:pr-6">
                                   <span className="text-xs text-muted-foreground/60 italic">—</span>
                                 </TableCell>
                               )
                             }
                             return (
-                              <TableCell key={q.id} className="py-3.5 px-4 text-sm">
-                                <div className="flex flex-wrap gap-1">
+                              <TableCell key={q.id} className="min-w-[200px] max-w-[320px] py-3.5 px-4 text-sm align-top last:pr-6">
+                                <div className="flex flex-wrap items-center gap-1.5 max-w-[280px]">
                                   {val.map((item, i) => (
                                     <span
                                       key={i}
-                                      className="inline-flex items-center rounded-md bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium border border-border/50"
+                                      className="inline-flex items-center whitespace-normal break-words rounded-md bg-secondary text-secondary-foreground px-2 py-0.5 text-xs font-medium border border-border/50"
                                     >
                                       {String(item)}
                                     </span>
@@ -312,10 +312,10 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                               ? String(val)
                               : ""
                           return (
-                            <TableCell key={q.id} className="py-3.5 px-4 text-sm">
+                            <TableCell key={q.id} className="min-w-[200px] max-w-[320px] py-3.5 px-4 text-sm align-top last:pr-6">
                               {displayStr ? (
                                 <span
-                                  className="block max-w-[260px] truncate text-foreground text-sm"
+                                  className="block max-w-[280px] break-words text-foreground text-sm"
                                   title={displayStr}
                                 >
                                   {displayStr}
