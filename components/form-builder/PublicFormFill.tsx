@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase"
 import { CheckCircle2, Loader2, Lock, Upload, FileText, Trash2 } from "lucide-react"
+import { z } from "zod"
 
 import { type QuestionRule } from "./QuestionCard"
 
@@ -445,6 +446,10 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [currentSectionIndex, setCurrentSectionIndex] = React.useState(0)
 
+  // Collect Email State
+  const [respondentEmail, setRespondentEmail] = React.useState("")
+  const [respondentEmailError, setRespondentEmailError] = React.useState<string | null>(null)
+
   const sections = React.useMemo(() => parseSections(questions), [questions])
   const totalSections = sections.length
   const safeSectionIndex = Math.min(currentSectionIndex, Math.max(0, totalSections - 1))
@@ -457,6 +462,39 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   const [passwordInput, setPasswordInput] = React.useState("")
   const [passwordError, setPasswordError] = React.useState<string | null>(null)
   const [isVerifyingPassword, setIsVerifyingPassword] = React.useState(false)
+
+  // Pre-fill respondent email if user is currently logged into Blazion Form
+  React.useEffect(() => {
+    async function checkUserEmail() {
+      try {
+        const supabase = createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (user?.email) {
+          setRespondentEmail((prev) => prev || user.email || "")
+        }
+      } catch (err) {
+        console.error("Error fetching logged-in user email:", err)
+      }
+    }
+    if (form.settings?.collect_email) {
+      checkUserEmail()
+    }
+  }, [form.settings?.collect_email])
+
+  const validateRespondentEmail = (emailStr: string): string | null => {
+    if (!form.settings?.collect_email) return null
+    const trimmed = (emailStr || "").trim()
+    if (!trimmed) {
+      return "Email address is required"
+    }
+    const result = z.string().email().safeParse(trimmed)
+    if (!result.success) {
+      return "Please enter a valid email address"
+    }
+    return null
+  }
 
   const {
     control,
@@ -486,6 +524,16 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
 
     const currentAnswers = watch()
     let hasSectionError = false
+
+    if (safeSectionIndex === 0 && form.settings?.collect_email) {
+      const emailErr = validateRespondentEmail(respondentEmail)
+      if (emailErr) {
+        setRespondentEmailError(emailErr)
+        hasSectionError = true
+      } else {
+        setRespondentEmailError(null)
+      }
+    }
 
     const visibleQuestionsInCurrentSection = currentSection.questions.filter((q) =>
       evaluateRules(q, currentAnswers)
@@ -615,6 +663,17 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     let firstErrorSectionIndex = -1
     let hasAnyError = false
 
+    if (form.settings?.collect_email) {
+      const emailErr = validateRespondentEmail(respondentEmail)
+      if (emailErr) {
+        setRespondentEmailError(emailErr)
+        hasAnyError = true
+        firstErrorSectionIndex = 0
+      } else {
+        setRespondentEmailError(null)
+      }
+    }
+
     questions.forEach((q) => {
       if (q.type !== "section_break" && evaluateRules(q, data)) {
         const err = validateQuestion(q, data)
@@ -651,14 +710,19 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
       }
     })
 
-    console.log("SUBMITTING FORM ANSWERS:", visibleAnswers)
+    const payload: Record<string, any> = { answers: visibleAnswers }
+    if (form.settings?.collect_email && respondentEmail) {
+      payload.respondent_email = respondentEmail.trim()
+    }
+
+    console.log("SUBMITTING FORM ANSWERS:", payload)
     setSubmitError(null)
     try {
-      console.log("POSTing payload to:", `/api/forms/${form.slug || form.id}/submit`, { answers: visibleAnswers })
+      console.log("POSTing payload to:", `/api/forms/${form.slug || form.id}/submit`, payload)
       const res = await fetch(`/api/forms/${form.slug || form.id}/submit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: visibleAnswers }),
+        body: JSON.stringify(payload),
       })
 
       console.log("RESPONSE STATUS:", res.status)
@@ -773,6 +837,37 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
           }}
           className="space-y-6"
         >
+
+          {/* Respondent Email Field (when collect_email setting is enabled) */}
+          {form.settings?.collect_email && safeSectionIndex === 0 && (
+            <Card className="p-6 border-border shadow-sm space-y-3">
+              <div>
+                <Label htmlFor="respondent-email" className="text-base font-semibold text-foreground flex items-center gap-1">
+                  <span>Your email</span>
+                  <span className="text-destructive font-bold" title="Required">*</span>
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  We&apos;ll send you a copy of your response
+                </p>
+              </div>
+              <Input
+                id="respondent-email"
+                type="email"
+                value={respondentEmail}
+                onChange={(e) => {
+                  setRespondentEmail(e.target.value)
+                  if (respondentEmailError) setRespondentEmailError(null)
+                }}
+                placeholder="name@example.com"
+                className="w-full"
+              />
+              {respondentEmailError && (
+                <p className="text-xs text-destructive font-medium">
+                  {respondentEmailError}
+                </p>
+              )}
+            </Card>
+          )}
 
           {currentSection.questions.map((question) => {
             if (!evaluateRules(question, answers)) {

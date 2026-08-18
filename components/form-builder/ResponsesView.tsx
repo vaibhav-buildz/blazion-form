@@ -34,6 +34,7 @@ interface Question {
 interface FormResponse {
   id: string
   answers: Record<string, any>
+  respondent_email?: string | null
   submitted_at?: string
   created_at?: string
 }
@@ -127,11 +128,16 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
     [questions]
   )
 
+  const hasRespondentEmail = React.useMemo(() => {
+    return responses.some((r) => Boolean(r.respondent_email))
+  }, [responses])
+
   const handleExportCSV = () => {
     if (!responses || responses.length === 0) return
 
     const headers = [
       "Submitted At",
+      ...(hasRespondentEmail ? ["Respondent Email"] : []),
       ...printableQuestions.map(
         (q) => `"${(q.title || "Untitled Question").replace(/"/g, '""')}"`
       ),
@@ -140,6 +146,9 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
     const rows = responses.map((resp) => {
       const dateStr = resp.submitted_at || resp.created_at
       const submittedAt = dateStr ? new Date(dateStr).toLocaleString() : "-"
+      const emailCol = hasRespondentEmail
+        ? [`"${(resp.respondent_email || "").replace(/"/g, '""')}"`]
+        : []
       const answers = printableQuestions.map((q) => {
         const val = resp.answers?.[q.id]
         let formatted = ""
@@ -150,7 +159,7 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
         }
         return `"${formatted.replace(/"/g, '""')}"`
       })
-      return [`"${submittedAt}"`, ...answers].join(",")
+      return [`"${submittedAt}"`, ...emailCol, ...answers].join(",")
     })
 
     const csvContent = [headers.join(","), ...rows].join("\n")
@@ -248,6 +257,11 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                       <TableHead className="w-48 min-w-[180px] font-semibold text-[11px] uppercase tracking-wider text-muted-foreground py-3.5 px-4">
                         Submitted At
                       </TableHead>
+                      {hasRespondentEmail && (
+                        <TableHead className="w-56 min-w-[200px] font-semibold text-[11px] uppercase tracking-wider text-muted-foreground py-3.5 px-4">
+                          Respondent Email
+                        </TableHead>
+                      )}
                       {printableQuestions.map((q) => (
                         <TableHead
                           key={q.id}
@@ -267,6 +281,13 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap py-3.5 px-4 font-mono align-top">
                           {formatDate(resp.submitted_at || resp.created_at)}
                         </TableCell>
+                        {hasRespondentEmail && (
+                          <TableCell className="text-xs text-foreground whitespace-nowrap py-3.5 px-4 font-mono align-top">
+                            {resp.respondent_email || (
+                              <span className="text-muted-foreground/60 italic">—</span>
+                            )}
+                          </TableCell>
+                        )}
 
                         {printableQuestions.map((q) => {
                           const val = resp.answers?.[q.id]

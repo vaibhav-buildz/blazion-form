@@ -10,6 +10,12 @@ export interface NotificationEmailProps {
   responseUrl: string
 }
 
+export interface RespondentEmailProps {
+  formTitle: string
+  submittedAt: string
+  answersSummary: AnswerSummaryPair[]
+}
+
 function escapeHtml(str: string): string {
   if (!str) return ""
   return String(str)
@@ -90,6 +96,72 @@ export function generateNotificationEmail({
           </div>
           <div style="background-color: #f8f9fa; padding: 16px 32px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7;">
             Sent via Blazion Form &bull; Notification Email
+          </div>
+        </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim()
+}
+
+export function generateRespondentConfirmationEmail({
+  formTitle,
+  submittedAt,
+  answersSummary,
+}: RespondentEmailProps): string {
+  const answersHtml =
+    answersSummary && answersSummary.length > 0
+      ? answersSummary
+          .map((pair) => {
+            const rawAnswer = pair.answer ?? ""
+            return `
+              <div style="margin-bottom: 12px; padding: 12px 16px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #4A5D23;">
+                <div style="font-weight: 600; color: #2d3748; font-size: 14px; margin-bottom: 4px;">${escapeHtml(
+                  pair.question
+                )}</div>
+                <div style="color: #4a5568; font-size: 14px; white-space: pre-wrap; word-break: break-word;">${escapeHtml(
+                  rawAnswer
+                )}</div>
+              </div>
+            `
+          })
+          .join("")
+      : `<p style="color: #718096; font-style: italic; font-size: 14px;">No answers submitted.</p>`
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your response to ${escapeHtml(formTitle)} has been recorded</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f5f7; margin: 0; padding: 24px; color: #2d3748; line-height: 1.5;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr>
+      <td align="center">
+        <div style="max-width: 600px; width: 100%; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left;">
+          <div style="background-color: #4A5D23; padding: 24px 32px;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Blazion Form</h1>
+          </div>
+          <div style="padding: 32px;">
+            <h2 style="margin-top: 0; margin-bottom: 8px; color: #1a202c; font-size: 18px; font-weight: 600;">
+              Thank you for your response!
+            </h2>
+            <p style="color: #4a5568; font-size: 14px; margin-top: 0; margin-bottom: 20px;">
+              Here&apos;s a copy of what you submitted for <strong>"${escapeHtml(
+                formTitle
+              )}"</strong> on ${escapeHtml(submittedAt)}:
+            </p>
+            
+            <div style="margin-bottom: 28px;">
+              ${answersHtml}
+            </div>
+          </div>
+          <div style="background-color: #f8f9fa; padding: 16px 32px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7;">
+            Sent via Blazion Form &bull; Submission Confirmation
           </div>
         </div>
       </td>

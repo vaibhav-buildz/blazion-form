@@ -3,7 +3,10 @@ import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { resend } from "@/lib/email/resend"
-import { generateNotificationEmail } from "@/lib/email/notification-template"
+import {
+  generateNotificationEmail,
+  generateRespondentConfirmationEmail,
+} from "@/lib/email/notification-template"
 
 export async function POST(
   req: Request,
@@ -60,7 +63,7 @@ export async function POST(
 
     const body = await req.json()
     console.log("INCOMING SUBMIT BODY:", JSON.stringify(body, null, 2))
-    const { answers } = body
+    const { answers, respondent_email } = body
 
     if (!answers || typeof answers !== "object") {
       return NextResponse.json(
@@ -69,15 +72,18 @@ export async function POST(
       )
     }
 
+    const insertRow: Record<string, any> = {
+      form_id: form.id,
+      answers,
+    }
+    if (respondent_email && typeof respondent_email === "string" && respondent_email.trim()) {
+      insertRow.respondent_email = respondent_email.trim()
+    }
+
     // Insert response into responses table
     const { data: response, error: insertError } = await supabase
       .from("responses")
-      .insert([
-        {
-          form_id: form.id,
-          answers,
-        },
-      ])
+      .insert([insertRow])
       .select()
       .maybeSingle()
 
@@ -246,6 +252,60 @@ export async function POST(
       }
     } catch (emailErr) {
       console.error("Failed to send response notification email:", emailErr)
+    }
+
+    // Send confirmation email to respondent if respondent_email is present
+    if (respondent_email && typeof respondent_email === "string" && respondent_email.trim()) {
+      try {
+        const { data: formQuestions } = await supabase
+          .from("questions")
+          .select("id, type, title, position")
+          .eq("form_id", form.id)
+          .order("position", { ascending: true })
+
+        const allAnswersSummary: Array<{ question: string; answer: string }> = []
+        if (formQuestions && Array.isArray(formQuestions)) {
+          for (const q of formQuestions) {
+            if (q.type === "section_break") continue
+            const ansVal = answers[q.id]
+            if (ansVal !== undefined && ansVal !== null && ansVal !== "") {
+              let formattedAns = ""
+              if (Array.isArray(ansVal)) {
+                formattedAns = ansVal.join(", ")
+              } else if (typeof ansVal === "object") {
+                formattedAns = JSON.stringify(ansVal)
+              } else {
+                formattedAns = String(ansVal)
+              }
+              allAnswersSummary.push({
+                question: q.title || "Untitled Question",
+                answer: formattedAns,
+              })
+            }
+          }
+        }
+
+        const submittedAt = new Date().toLocaleString("en-US", {
+          dateStyle: "medium",
+          timeStyle: "short",
+        })
+
+        const respondentHtml = generateRespondentConfirmationEmail({
+          formTitle: form.title || "Untitled Form",
+          submittedAt,
+          answersSummary: allAnswersSummary,
+        })
+
+        const respEmailResult = await resend.emails.send({
+          from: "Blazion Form <onboarding@resend.dev>",
+          to: [respondent_email.trim()],
+          subject: `Your response to "${form.title || "Untitled Form"}" has been recorded`,
+          html: respondentHtml,
+        })
+        console.log("Respondent confirmation email sent successfully:", respEmailResult)
+      } catch (respEmailErr) {
+        console.error("Failed to send respondent confirmation email:", respEmailErr)
+      }
     }
 
     return NextResponse.json({ success: true, responseId: response?.id })
