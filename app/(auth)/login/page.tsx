@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
@@ -74,6 +74,8 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
       />
     </svg>
   )
+}
+
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()

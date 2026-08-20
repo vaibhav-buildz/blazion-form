@@ -571,6 +571,19 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     }
   }
 
+  const validateRespondentEmail = (emailStr: string): string | null => {
+    if (!form.settings?.collect_email) return null
+    const trimmed = (emailStr || "").trim()
+    if (!trimmed) {
+      return "Email address is required"
+    }
+    const result = z.string().email().safeParse(trimmed)
+    if (!result.success) {
+      return "Please enter a valid email address"
+    }
+    return null
+  }
+
   const {
     control,
     handleSubmit,
