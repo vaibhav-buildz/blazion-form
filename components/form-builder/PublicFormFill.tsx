@@ -871,51 +871,206 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
         )}
 
         {/* Form Title & Description Header Card */}
-        <Card className="p-8 border-border shadow-sm">
+        <Card className="p-8 border-border shadow-sm space-y-3">
           <h1 className="text-3xl font-bold text-foreground tracking-tight">
             {form.title}
           </h1>
           {form.description && (
-            <p className="mt-3 text-muted-foreground leading-relaxed text-sm">
+            <p className="text-muted-foreground leading-relaxed text-sm">
               {form.description}
             </p>
           )}
+
+          {/* Verified Badges */}
+          {verificationMode === "login" && userEmail && (
+            <div className="pt-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>Verified as: <strong className="font-semibold">{userEmail}</strong> ✓</span>
+              </div>
+            </div>
+          )}
+
+          {verificationMode === "otp" && isOtpVerified && (
+            <div className="pt-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span>Verified email: <strong className="font-semibold">{otpVerifiedEmail}</strong> ✓</span>
+              </div>
+            </div>
+          )}
         </Card>
 
-        {/* Section Header Card (if section break header exists for current section) */}
-        {currentSection.header && (
-          <Card className="p-6 border-border shadow-sm bg-card space-y-2 border-l-4 border-l-primary">
-            <h2 className="text-xl font-bold text-foreground">
-              {currentSection.header.title || "Untitled Section"}
-            </h2>
-            {currentSection.header.description && (
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {currentSection.header.description}
+        {/* Loading Spinner for Auth Check */}
+        {verificationMode === "login" && isCheckingAuth && (
+          <div className="flex items-center justify-center p-8 space-x-2 text-muted-foreground text-sm">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span>Checking account status...</span>
+          </div>
+        )}
+
+        {/* MODE 'login' Gate: Unauthenticated User */}
+        {verificationMode === "login" && !isCheckingAuth && !userEmail && (
+          <Card className="p-8 border-border shadow-sm text-center space-y-4">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Lock className="h-6 w-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-bold text-foreground">Please log in to respond to this form</h3>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                This form requires respondents to be logged into a Blazion Form account to verify their identity.
               </p>
+            </div>
+            <div className="pt-2">
+              <Button asChild className="px-6 font-semibold">
+                <Link
+                  href={`/login?returnTo=${encodeURIComponent(
+                    typeof window !== "undefined"
+                      ? window.location.pathname + window.location.search
+                      : ""
+                  )}`}
+                >
+                  Log in
+                </Link>
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* MODE 'otp' Gate: Unverified Email */}
+        {verificationMode === "otp" && !isOtpVerified && (
+          <Card className="p-6 border-border shadow-sm space-y-4">
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Mail className="h-4 w-4 text-primary" /> Email Verification Required
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Please verify your email address to unlock and respond to this form.
+              </p>
+            </div>
+
+            {!isOtpSent ? (
+              <form onSubmit={handleSendOtp} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="otp-email-input" className="text-xs font-semibold">
+                    Your Email Address
+                  </Label>
+                  <Input
+                    id="otp-email-input"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={otpEmailInput}
+                    onChange={(e) => {
+                      setOtpEmailInput(e.target.value)
+                      setOtpError(null)
+                    }}
+                    required
+                  />
+                </div>
+                {otpError && <p className="text-xs font-medium text-destructive">{otpError}</p>}
+                <Button type="submit" size="sm" disabled={isOtpSending} className="w-full sm:w-auto font-semibold">
+                  {isOtpSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send Code
+                </Button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOtp} className="space-y-3">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="otp-code-input" className="text-xs font-semibold">
+                      Enter 6-Digit Code
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOtpSent(false)
+                        setOtpError(null)
+                        setOtpSuccessMsg(null)
+                      }}
+                      className="text-xs text-primary hover:underline font-medium"
+                    >
+                      Change email ({otpEmailInput})
+                    </button>
+                  </div>
+                  <Input
+                    id="otp-code-input"
+                    type="text"
+                    maxLength={6}
+                    placeholder="123456"
+                    value={otpCodeInput}
+                    onChange={(e) => {
+                      setOtpCodeInput(e.target.value)
+                      setOtpError(null)
+                    }}
+                    className="text-center font-mono tracking-widest text-lg"
+                    required
+                  />
+                </div>
+                {otpSuccessMsg && (
+                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {otpSuccessMsg}
+                  </p>
+                )}
+                {otpError && <p className="text-xs font-medium text-destructive">{otpError}</p>}
+                <div className="flex gap-2 pt-1">
+                  <Button type="submit" size="sm" disabled={isOtpVerifying} className="flex-1 sm:flex-none font-semibold">
+                    {isOtpVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Verify Code
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSendOtp()}
+                    disabled={isOtpSending}
+                  >
+                    Resend Code
+                  </Button>
+                </div>
+              </form>
             )}
           </Card>
         )}
 
-        {/* Questions Form */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (safeSectionIndex < totalSections - 1) {
-              return
-            }
-            handleSubmit(onSubmit, onError)(e)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && safeSectionIndex < totalSections - 1) {
-              const target = e.target as HTMLElement
-              if (target.tagName !== "TEXTAREA") {
+        {/* Questions Form — Only visible when email requirement is satisfied */}
+        {((verificationMode === "none") ||
+          (verificationMode === "login" && userEmail) ||
+          (verificationMode === "otp" && isOtpVerified)) && (
+          <>
+            {/* Section Header Card (if section break header exists for current section) */}
+            {currentSection.header && (
+              <Card className="p-6 border-border shadow-sm bg-card space-y-2 border-l-4 border-l-primary">
+                <h2 className="text-xl font-bold text-foreground">
+                  {currentSection.header.title || "Untitled Section"}
+                </h2>
+                {currentSection.header.description && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {currentSection.header.description}
+                  </p>
+                )}
+              </Card>
+            )}
+
+            {/* Questions Form */}
+            <form
+              onSubmit={(e) => {
                 e.preventDefault()
-                handleNextSection()
-              }
-            }
-          }}
-          className="space-y-6"
-        >
+                if (safeSectionIndex < totalSections - 1) {
+                  return
+                }
+                handleSubmit(onSubmit, onError)(e)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && safeSectionIndex < totalSections - 1) {
+                  const target = e.target as HTMLElement
+                  if (target.tagName !== "TEXTAREA") {
+                    e.preventDefault()
+                    handleNextSection()
+                  }
+                }
+              }}
+              className="space-y-6"
+            >
 
           {/* Respondent Email Field (when collect_email setting is enabled) */}
           {form.settings?.collect_email && safeSectionIndex === 0 && (
@@ -1259,7 +1414,9 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
             )}
           </div>
         </form>
-      </div>
-    </div>
+      </>
+    )}
+  </div>
+</div>
   )
 }

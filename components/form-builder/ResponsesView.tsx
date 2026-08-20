@@ -35,6 +35,7 @@ interface FormResponse {
   id: string
   answers: Record<string, any>
   respondent_email?: string | null
+  verification_method?: "login" | "otp" | string | null
   submitted_at?: string
   created_at?: string
 }
@@ -132,12 +133,17 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
     return responses.some((r) => Boolean(r.respondent_email))
   }, [responses])
 
+  const hasVerificationMethod = React.useMemo(() => {
+    return responses.some((r) => Boolean(r.verification_method))
+  }, [responses])
+
   const handleExportCSV = () => {
     if (!responses || responses.length === 0) return
 
     const headers = [
       "Submitted At",
       ...(hasRespondentEmail ? ["Respondent Email"] : []),
+      ...(hasVerificationMethod ? ["Verification Method"] : []),
       ...printableQuestions.map(
         (q) => `"${(q.title || "Untitled Question").replace(/"/g, '""')}"`
       ),
@@ -149,6 +155,9 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
       const emailCol = hasRespondentEmail
         ? [`"${(resp.respondent_email || "").replace(/"/g, '""')}"`]
         : []
+      const verifCol = hasVerificationMethod
+        ? [`"${(resp.verification_method || "").replace(/"/g, '""')}"`]
+        : []
       const answers = printableQuestions.map((q) => {
         const val = resp.answers?.[q.id]
         let formatted = ""
@@ -159,7 +168,7 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
         }
         return `"${formatted.replace(/"/g, '""')}"`
       })
-      return [`"${submittedAt}"`, ...emailCol, ...answers].join(",")
+      return [`"${submittedAt}"`, ...emailCol, ...verifCol, ...answers].join(",")
     })
 
     const csvContent = [headers.join(","), ...rows].join("\n")
@@ -283,7 +292,21 @@ export function ResponsesView({ form, questions, responses }: ResponsesViewProps
                         </TableCell>
                         {hasRespondentEmail && (
                           <TableCell className="text-xs text-foreground whitespace-nowrap py-3.5 px-4 font-mono align-top">
-                            {resp.respondent_email || (
+                            {resp.respondent_email ? (
+                              <div className="flex flex-col gap-1 items-start">
+                                <span>{resp.respondent_email}</span>
+                                {resp.verification_method === "login" && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400 border border-blue-500/20 font-sans">
+                                    Login-verified
+                                  </span>
+                                )}
+                                {resp.verification_method === "otp" && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-sans">
+                                    OTP-verified
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
                               <span className="text-muted-foreground/60 italic">—</span>
                             )}
                           </TableCell>

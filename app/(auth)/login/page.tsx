@@ -74,10 +74,6 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
       />
     </svg>
   )
-}
-
-}
-
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()

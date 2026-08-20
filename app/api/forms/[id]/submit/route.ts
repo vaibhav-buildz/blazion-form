@@ -72,20 +72,102 @@ export async function POST(
       )
     }
 
+    const mode: "none" | "login" | "otp" =
+      form.settings?.email_verification_mode ||
+      (form.settings?.collect_email ? "otp" : "none")
+
+    let verifiedRespondentEmail: string | null = null
+    let verificationMethod: "login" | "otp" | null = null
+
+    if (mode === "login") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user || !user.email) {
+        return NextResponse.json(
+          { error: "Authentication required to submit this form" },
+          { status: 401 }
+        )
+      }
+
+      verifiedRespondentEmail = user.email
+      verificationMethod = "login"
+    } else if (mode === "otp") {
+      if (!respondent_email || typeof respondent_email !== "string" || !respondent_email.trim()) {
+        return NextResponse.json(
+          { error: "Respondent email is required for OTP verification" },
+          { status: 400 }
+        )
+      }
+
+      const cleanEmail = respondent_email.trim().toLowerCase()
+
+      const serviceRoleKey =
+        process.env.SUPABASE_SERVICE_ROLE_KEY ||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+      const adminSupabase = createSupabaseAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        serviceRoleKey!
+      )
+
+      const nowIso = new Date().toISOString()
+
+      const { data: verifications, error: verifError } = await adminSupabase
+        .from("email_otp_verifications")
+        .select("id, verified")
+        .eq("form_id", form.id)
+        .eq("email", cleanEmail)
+        .eq("verified", true)
+        .gte("expires_at", nowIso)
+
+      if (verifError || !verifications || verifications.length === 0) {
+        return NextResponse.json(
+          { error: "Email verification required before submission" },
+          { status: 403 }
+        )
+      }
+
+      verifiedRespondentEmail = cleanEmail
+      verificationMethod = "otp"
+    } else {
+      // mode === 'none'
+      if (respondent_email && typeof respondent_email === "string" && respondent_email.trim()) {
+        verifiedRespondentEmail = respondent_email.trim()
+      }
+      verificationMethod = null
+    }
+
     const insertRow: Record<string, any> = {
       form_id: form.id,
       answers,
     }
-    if (respondent_email && typeof respondent_email === "string" && respondent_email.trim()) {
-      insertRow.respondent_email = respondent_email.trim()
+    if (verifiedRespondentEmail) {
+      insertRow.respondent_email = verifiedRespondentEmail
+    }
+    if (verificationMethod) {
+      insertRow.verification_method = verificationMethod
     }
 
     // Insert response into responses table
-    const { data: response, error: insertError } = await supabase
+    let { data: response, error: insertError } = await supabase
       .from("responses")
       .insert([insertRow])
       .select()
       .maybeSingle()
+
+    if (insertError && verificationMethod && insertError.message?.includes("verification_method")) {
+      console.warn("Retrying response insert without verification_method column...")
+      delete insertRow.verification_method
+      const fallbackResult = await supabase
+        .from("responses")
+        .insert([insertRow])
+        .select()
+        .maybeSingle()
+      response = fallbackResult.data
+      insertError = fallbackResult.error
+    }
 
     if (insertError) {
       console.error("Supabase insert error saving response:", insertError)
@@ -254,8 +336,9 @@ export async function POST(
       console.error("Failed to send response notification email:", emailErr)
     }
 
-    // Send confirmation email to respondent if respondent_email is present
-    if (respondent_email && typeof respondent_email === "string" && respondent_email.trim()) {
+    // Send confirmation email to respondent if verified email is present
+    const targetRespondentEmail = verifiedRespondentEmail || (typeof respondent_email === "string" ? respondent_email.trim() : null)
+    if (targetRespondentEmail) {
       try {
         const { data: formQuestions } = await supabase
           .from("questions")
@@ -298,7 +381,7 @@ export async function POST(
 
         const respEmailResult = await resend.emails.send({
           from: "Blazion Form <onboarding@resend.dev>",
-          to: [respondent_email.trim()],
+          to: [targetRespondentEmail],
           subject: `Your response to "${form.title || "Untitled Form"}" has been recorded`,
           html: respondentHtml,
         })
