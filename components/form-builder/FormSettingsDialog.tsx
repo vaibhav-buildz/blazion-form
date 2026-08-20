@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Clock, Lock, ShieldAlert, Loader2, Mail, AtSign } from "lucide-react"
 
 interface FormSettingsDialogProps {
@@ -74,10 +75,22 @@ export function FormSettingsDialog({
     currentSettings.notify_on_response !== false
   )
 
-  // Collect Email state
-  const [collectEmail, setCollectEmail] = React.useState<boolean>(
-    Boolean(currentSettings.collect_email)
-  )
+  // Email Verification Mode state
+  const getInitialMode = (settings: Record<string, any>): "none" | "login" | "otp" => {
+    if (
+      settings.email_verification_mode === "login" ||
+      settings.email_verification_mode === "otp" ||
+      settings.email_verification_mode === "none"
+    ) {
+      return settings.email_verification_mode
+    }
+    if (settings.collect_email) return "otp"
+    return "none"
+  }
+
+  const [emailVerificationMode, setEmailVerificationMode] = React.useState<
+    "none" | "login" | "otp"
+  >(getInitialMode(currentSettings))
 
   // Sync state when dialog opens
   React.useEffect(() => {
@@ -108,7 +121,7 @@ export function FormSettingsDialog({
       setPasswordInput("")
 
       setNotifyOnResponse(settings.notify_on_response !== false)
-      setCollectEmail(Boolean(settings.collect_email))
+      setEmailVerificationMode(getInitialMode(settings))
     }
   }, [open, form.settings])
 
@@ -153,7 +166,8 @@ export function FormSettingsDialog({
         expires_at: finalExpiresAt,
         response_limit: limitNum && !isNaN(limitNum) && limitNum > 0 ? limitNum : null,
         notify_on_response: notifyOnResponse,
-        collect_email: collectEmail,
+        email_verification_mode: emailVerificationMode,
+        collect_email: emailVerificationMode !== "none",
       }
 
       if (enablePassword) {
@@ -331,24 +345,61 @@ export function FormSettingsDialog({
             </p>
           </div>
 
-          {/* E) Collect Email Addresses */}
+          {/* E) Email Verification for Respondents */}
           <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="collect-email-toggle"
-                checked={collectEmail}
-                onCheckedChange={(checked) => setCollectEmail(Boolean(checked))}
-              />
-              <Label
-                htmlFor="collect-email-toggle"
-                className="text-sm font-semibold cursor-pointer flex items-center gap-1.5"
+            <Label className="font-semibold text-sm flex items-center gap-1.5">
+              <AtSign className="h-4 w-4 text-muted-foreground" /> Email verification for respondents
+            </Label>
+            <RadioGroup
+              value={emailVerificationMode}
+              onValueChange={(val) => setEmailVerificationMode(val as "none" | "login" | "otp")}
+              className="space-y-2 pt-1"
+            >
+              <div
+                className="flex items-start space-x-3 rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                onClick={() => setEmailVerificationMode("none")}
               >
-                <AtSign className="h-4 w-4 text-muted-foreground" /> Collect email addresses
-              </Label>
-            </div>
-            <p className="pl-6 text-xs text-muted-foreground">
-              Respondents will be asked for their email, and will receive a copy of their response.
-            </p>
+                <RadioGroupItem value="none" id="verify-none" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <Label htmlFor="verify-none" className="text-sm font-medium cursor-pointer">
+                    None (Default)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    No email collection or verification required.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className="flex items-start space-x-3 rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                onClick={() => setEmailVerificationMode("login")}
+              >
+                <RadioGroupItem value="login" id="verify-login" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <Label htmlFor="verify-login" className="text-sm font-medium cursor-pointer">
+                    Require Blazion login
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Respondent must be logged into a Blazion Form account. Account email is automatically captured and considered verified.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className="flex items-start space-x-3 rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors cursor-pointer"
+                onClick={() => setEmailVerificationMode("otp")}
+              >
+                <RadioGroupItem value="otp" id="verify-otp" className="mt-0.5" />
+                <div className="space-y-0.5">
+                  <Label htmlFor="verify-otp" className="text-sm font-medium cursor-pointer">
+                    Verify via OTP
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Respondent enters any email, receives a 6-digit code, and must verify it. No account required.
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
           </div>
         </div>
 

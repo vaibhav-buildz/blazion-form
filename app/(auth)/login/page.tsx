@@ -76,8 +76,13 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
-export default function LoginPage() {
+}
+
+export function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const returnTo = searchParams.get("returnTo") || "/dashboard"
+
   const supabase = createClient()
   const [error, setError] = React.useState<string | null>(null)
   const [loading, setLoading] = React.useState(false)
@@ -92,20 +97,22 @@ export default function LoginPage() {
 
   const handleGitHubLogin = async () => {
     const supabaseClient = createClient()
+    const callbackNext = returnTo !== "/dashboard" ? `?next=${encodeURIComponent(returnTo)}` : ""
     await supabaseClient.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback${callbackNext}`,
       },
     })
   }
 
   const handleGoogleLogin = async () => {
     const supabaseClient = createClient()
+    const callbackNext = returnTo !== "/dashboard" ? `?next=${encodeURIComponent(returnTo)}` : ""
     await supabaseClient.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback${callbackNext}`,
       },
     })
   }
@@ -126,7 +133,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push("/dashboard")
+      router.push(returnTo)
       router.refresh()
     } catch (err: any) {
       console.error("Unhandled login exception:", err)
@@ -243,5 +250,13 @@ export default function LoginPage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <React.Suspense fallback={<div className="flex min-h-screen items-center justify-center">Loading...</div>}>
+      <LoginForm />
+    </React.Suspense>
   )
 }

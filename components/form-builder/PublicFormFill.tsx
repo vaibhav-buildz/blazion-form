@@ -16,8 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase"
-import { CheckCircle2, Loader2, Lock, Upload, FileText, Trash2 } from "lucide-react"
+import { CheckCircle2, Loader2, Lock, Upload, FileText, Trash2, Mail } from "lucide-react"
 import { z } from "zod"
 
 import { type QuestionRule } from "./QuestionCard"
@@ -446,9 +447,29 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [currentSectionIndex, setCurrentSectionIndex] = React.useState(0)
 
+  // Email Verification Mode
+  const verificationMode: "none" | "login" | "otp" =
+    form.settings?.email_verification_mode ||
+    (form.settings?.collect_email ? "otp" : "none")
+
   // Collect Email State
   const [respondentEmail, setRespondentEmail] = React.useState("")
   const [respondentEmailError, setRespondentEmailError] = React.useState<string | null>(null)
+
+  // Mode 'login' State
+  const [userEmail, setUserEmail] = React.useState<string | null>(null)
+  const [isCheckingAuth, setIsCheckingAuth] = React.useState<boolean>(verificationMode === "login")
+
+  // Mode 'otp' State
+  const [otpEmailInput, setOtpEmailInput] = React.useState("")
+  const [otpCodeInput, setOtpCodeInput] = React.useState("")
+  const [isOtpSent, setIsOtpSent] = React.useState(false)
+  const [isOtpSending, setIsOtpSending] = React.useState(false)
+  const [isOtpVerifying, setIsOtpVerifying] = React.useState(false)
+  const [isOtpVerified, setIsOtpVerified] = React.useState(false)
+  const [otpVerifiedEmail, setOtpVerifiedEmail] = React.useState("")
+  const [otpError, setOtpError] = React.useState<string | null>(null)
+  const [otpSuccessMsg, setOtpSuccessMsg] = React.useState<string | null>(null)
 
   const sections = React.useMemo(() => parseSections(questions), [questions])
   const totalSections = sections.length
@@ -463,37 +484,91 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
   const [passwordError, setPasswordError] = React.useState<string | null>(null)
   const [isVerifyingPassword, setIsVerifyingPassword] = React.useState(false)
 
-  // Pre-fill respondent email if user is currently logged into Blazion Form
+  // Check Supabase session client-side on mount for mode 'login' (and pre-fill fallback)
   React.useEffect(() => {
-    async function checkUserEmail() {
+    async function checkAuth() {
       try {
         const supabase = createClient()
         const {
-          data: { user },
-        } = await supabase.auth.getUser()
-        if (user?.email) {
-          setRespondentEmail((prev) => prev || user.email || "")
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (session?.user?.email) {
+          setUserEmail(session.user.email)
+          setRespondentEmail(session.user.email)
+        } else {
+          setUserEmail(null)
         }
       } catch (err) {
-        console.error("Error fetching logged-in user email:", err)
+        console.error("Error fetching session user:", err)
+        setUserEmail(null)
+      } finally {
+        setIsCheckingAuth(false)
       }
     }
-    if (form.settings?.collect_email) {
-      checkUserEmail()
-    }
-  }, [form.settings?.collect_email])
+    checkAuth()
+  }, [verificationMode])
 
-  const validateRespondentEmail = (emailStr: string): string | null => {
-    if (!form.settings?.collect_email) return null
-    const trimmed = (emailStr || "").trim()
-    if (!trimmed) {
-      return "Email address is required"
+  const handleSendOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const cleanEmail = otpEmailInput.trim()
+    if (!cleanEmail) {
+      setOtpError("Please enter your email address")
+      return
     }
-    const result = z.string().email().safeParse(trimmed)
+    const result = z.string().email().safeParse(cleanEmail)
     if (!result.success) {
-      return "Please enter a valid email address"
+      setOtpError("Please enter a valid email address")
+      return
     }
-    return null
+    setIsOtpSending(true)
+    setOtpError(null)
+    setOtpSuccessMsg(null)
+    try {
+      const res = await fetch(`/api/forms/${form.slug || form.id}/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send verification code")
+      }
+      setIsOtpSent(true)
+      setOtpSuccessMsg(`Verification code sent to ${cleanEmail}`)
+    } catch (err: any) {
+      setOtpError(err.message || "Failed to send verification code")
+    } finally {
+      setIsOtpSending(false)
+    }
+  }
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const cleanCode = otpCodeInput.trim()
+    if (!cleanCode) {
+      setOtpError("Please enter the 6-digit verification code")
+      return
+    }
+    setIsOtpVerifying(true)
+    setOtpError(null)
+    try {
+      const res = await fetch(`/api/forms/${form.slug || form.id}/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: otpEmailInput.trim(), code: cleanCode }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error || "Invalid verification code")
+      }
+      setIsOtpVerified(true)
+      setOtpVerifiedEmail(otpEmailInput.trim())
+      setRespondentEmail(otpEmailInput.trim())
+    } catch (err: any) {
+      setOtpError(err.message || "Invalid or expired code")
+    } finally {
+      setIsOtpVerifying(false)
+    }
   }
 
   const {
@@ -711,7 +786,11 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     })
 
     const payload: Record<string, any> = { answers: visibleAnswers }
-    if (form.settings?.collect_email && respondentEmail) {
+    if (verificationMode === "login" && userEmail) {
+      payload.respondent_email = userEmail
+    } else if (verificationMode === "otp" && otpVerifiedEmail) {
+      payload.respondent_email = otpVerifiedEmail
+    } else if (form.settings?.collect_email && respondentEmail) {
       payload.respondent_email = respondentEmail.trim()
     }
 
