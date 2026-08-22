@@ -512,7 +512,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    const cleanEmail = otpEmailInput.trim()
+    const cleanEmail = otpEmailInput.trim().toLowerCase()
     if (!cleanEmail) {
       setOtpError("Please enter your email address")
       return
@@ -546,6 +546,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
+    const cleanEmail = otpEmailInput.trim().toLowerCase()
     const cleanCode = otpCodeInput.trim()
     if (!cleanCode) {
       setOtpError("Please enter the 6-digit verification code")
@@ -557,15 +558,15 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
       const res = await fetch(`/api/forms/${form.slug || form.id}/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: otpEmailInput.trim(), code: cleanCode }),
+        body: JSON.stringify({ email: cleanEmail, code: cleanCode }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         throw new Error(data.error || "Invalid verification code")
       }
       setIsOtpVerified(true)
-      setOtpVerifiedEmail(otpEmailInput.trim())
-      setRespondentEmail(otpEmailInput.trim())
+      setOtpVerifiedEmail(cleanEmail)
+      setRespondentEmail(cleanEmail)
     } catch (err: any) {
       setOtpError(err.message || "Invalid or expired code")
     } finally {

@@ -66,6 +66,15 @@ export async function POST(
     const cleanEmail = email.trim().toLowerCase()
     const cleanCode = code.trim()
 
+    console.log("[VERIFY-OTP LOOKUP INPUTS]", {
+      routeParamId: id,
+      resolvedFormId: form.id,
+      rawEmailInput: email,
+      cleanEmailNormalized: cleanEmail,
+      rawCodeInput: code,
+      cleanCodeNormalized: cleanCode,
+    })
+
     const serviceRoleKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

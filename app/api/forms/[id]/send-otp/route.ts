@@ -82,8 +82,17 @@ export async function POST(
       serviceRoleKey!
     )
 
+    console.log("[SEND-OTP DEBUG INSERT PAYLOAD]", {
+      form_id: form.id,
+      email,
+      code,
+      verified: false,
+      expires_at: expiresAt,
+      hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    })
+
     // Save record to email_otp_verifications
-    const { error: dbError } = await dbClient
+    const { data: insertData, error: dbError } = await dbClient
       .from("email_otp_verifications")
       .insert([
         {
@@ -94,9 +103,16 @@ export async function POST(
           expires_at: expiresAt,
         },
       ])
+      .select()
+
+    console.log("[SEND-OTP DEBUG INSERT RESULT]", { insertData, dbError })
 
     if (dbError) {
       console.error("Error saving OTP to database:", dbError)
+      return NextResponse.json(
+        { error: `Database error saving OTP: ${dbError.message}` },
+        { status: 500 }
+      )
     }
 
     // Send email with Resend
