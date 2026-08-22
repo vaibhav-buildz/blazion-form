@@ -93,8 +93,9 @@ export function FormSettingsDialog({
   >(getInitialMode(currentSettings))
 
   // Sync state when dialog opens
+  const prevOpenRef = React.useRef(open)
   React.useEffect(() => {
-    if (open) {
+    if (open && !prevOpenRef.current) {
       const settings = form.settings || {}
       setExpiresAt(settings.expires_at || null)
       if (settings.expires_at) {
@@ -123,6 +124,7 @@ export function FormSettingsDialog({
       setNotifyOnResponse(settings.notify_on_response !== false)
       setEmailVerificationMode(getInitialMode(settings))
     }
+    prevOpenRef.current = open
   }, [open, form.settings])
 
   const handleClearExpiry = () => {
