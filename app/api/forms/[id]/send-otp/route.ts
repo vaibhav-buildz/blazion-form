@@ -85,7 +85,7 @@ export async function POST(
     console.log("[SEND-OTP DEBUG INSERT PAYLOAD]", {
       form_id: form.id,
       email,
-      code,
+      otp: code,
       verified: false,
       expires_at: expiresAt,
       hasServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
@@ -98,7 +98,7 @@ export async function POST(
         {
           form_id: form.id,
           email,
-          code,
+          otp: code,
           verified: false,
           expires_at: expiresAt,
         },

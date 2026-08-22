@@ -106,11 +106,12 @@ export async function POST(
       recordsCount: records?.length || 0,
       records: records?.map((r) => {
         const expTime = new Date(r.expires_at).getTime()
+        const storedOtp = r.otp ?? r.code
         return {
           id: r.id,
-          code: r.code,
-          codeType: typeof r.code,
-          codeMatch: String(r.code).trim() === cleanCode,
+          otp: storedOtp,
+          otpType: typeof storedOtp,
+          otpMatch: String(storedOtp).trim() === cleanCode,
           expires_at: r.expires_at,
           expiresAtTime: expTime,
           isExpired: isNaN(expTime) || expTime < now,
@@ -129,7 +130,8 @@ export async function POST(
 
     // Find the matching unexpired OTP record
     const matchingRecord = records.find((r) => {
-      const isCodeMatch = String(r.code).trim() === cleanCode
+      const storedOtp = r.otp ?? r.code
+      const isCodeMatch = String(storedOtp).trim() === cleanCode
       const expTime = new Date(r.expires_at).getTime()
       const isNotExpired = !isNaN(expTime) && expTime >= now
       return isCodeMatch && isNotExpired
@@ -137,9 +139,10 @@ export async function POST(
 
     if (!matchingRecord) {
       // Check if code matched an expired record
-      const expiredMatch = records.find(
-        (r) => String(r.code).trim() === cleanCode
-      )
+      const expiredMatch = records.find((r) => {
+        const storedOtp = r.otp ?? r.code
+        return String(storedOtp).trim() === cleanCode
+      })
       if (expiredMatch) {
         return NextResponse.json(
           { error: "Verification code has expired. Please request a new code." },
