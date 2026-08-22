@@ -32,50 +32,23 @@ export function FormSettingsDialog({
   onOpenChange,
   onSettingsSaved,
 }: FormSettingsDialogProps) {
-  const currentSettings = form.settings || {}
-
-  // Expiry state
-  const [expiresAt, setExpiresAt] = React.useState<string | null>(
-    currentSettings.expires_at || null
-  )
-  const [dateStr, setDateStr] = React.useState<string>(() => {
-    if (currentSettings.expires_at) {
-      const d = new Date(currentSettings.expires_at)
-      if (!isNaN(d.getTime())) return d.toISOString().split("T")[0]
-    }
-    return ""
-  })
-  const [timeStr, setTimeStr] = React.useState<string>(() => {
-    if (currentSettings.expires_at) {
-      const d = new Date(currentSettings.expires_at)
-      if (!isNaN(d.getTime())) {
-        const hh = String(d.getHours()).padStart(2, "0")
-        const mm = String(d.getMinutes()).padStart(2, "0")
-        return `${hh}:${mm}`
-      }
-    }
-    return "18:00"
-  })
-
-  // Response Limit state
-  const [responseLimit, setResponseLimit] = React.useState<string>(
-    currentSettings.response_limit !== undefined && currentSettings.response_limit !== null
-      ? String(currentSettings.response_limit)
-      : ""
-  )
-
-  // Password Protection state
-  const hasExistingHash = Boolean(currentSettings.password_hash)
-  const [enablePassword, setEnablePassword] = React.useState<boolean>(hasExistingHash)
+  // Local Draft State
+  const [expiresAt, setExpiresAt] = React.useState<string | null>(null)
+  const [dateStr, setDateStr] = React.useState<string>("")
+  const [timeStr, setTimeStr] = React.useState<string>("18:00")
+  const [responseLimit, setResponseLimit] = React.useState<string>("")
+  const [enablePassword, setEnablePassword] = React.useState<boolean>(false)
   const [passwordInput, setPasswordInput] = React.useState<string>("")
+  const [notifyOnResponse, setNotifyOnResponse] = React.useState<boolean>(true)
+  const [emailVerificationMode, setEmailVerificationMode] = React.useState<
+    "none" | "login" | "otp"
+  >("none")
+
   const [isSaving, setIsSaving] = React.useState(false)
+  const [saveSuccess, setSaveSuccess] = React.useState(false)
 
-  // Email Notification state
-  const [notifyOnResponse, setNotifyOnResponse] = React.useState<boolean>(
-    currentSettings.notify_on_response !== false
-  )
+  const hasExistingHash = Boolean(form.settings?.password_hash)
 
-  // Email Verification Mode state
   const getInitialMode = (settings: Record<string, any>): "none" | "login" | "otp" => {
     if (
       settings.email_verification_mode === "login" ||
@@ -88,16 +61,12 @@ export function FormSettingsDialog({
     return "none"
   }
 
-  const [emailVerificationMode, setEmailVerificationMode] = React.useState<
-    "none" | "login" | "otp"
-  >(getInitialMode(currentSettings))
-
-  // Sync state when dialog opens
-  const prevOpenRef = React.useRef(open)
+  // Initialize draft state ONLY when the dialog opens
   React.useEffect(() => {
-    if (open && !prevOpenRef.current) {
+    if (open) {
       const settings = form.settings || {}
       setExpiresAt(settings.expires_at || null)
+
       if (settings.expires_at) {
         const d = new Date(settings.expires_at)
         if (!isNaN(d.getTime())) {
@@ -117,15 +86,13 @@ export function FormSettingsDialog({
           : ""
       )
 
-      const hasHash = Boolean(settings.password_hash)
-      setEnablePassword(hasHash)
+      setEnablePassword(Boolean(settings.password_hash))
       setPasswordInput("")
-
       setNotifyOnResponse(settings.notify_on_response !== false)
       setEmailVerificationMode(getInitialMode(settings))
+      setSaveSuccess(false)
     }
-    prevOpenRef.current = open
-  }, [open, form.settings])
+  }, [open])
 
   const handleClearExpiry = () => {
     setExpiresAt(null)
@@ -151,8 +118,10 @@ export function FormSettingsDialog({
     }
   }
 
-  const handleSave = async () => {
+  // Explicit Save Handler — ONLY triggered when user clicks "Done"
+  const handleDone = async () => {
     setIsSaving(true)
+    setSaveSuccess(false)
     try {
       let finalExpiresAt: string | null = null
       if (dateStr) {
@@ -196,7 +165,10 @@ export function FormSettingsDialog({
         onSettingsSaved(updatedForm.settings || {})
       }
 
-      onOpenChange(false)
+      setSaveSuccess(true)
+      setTimeout(() => {
+        onOpenChange(false)
+      }, 300)
     } catch (err: any) {
       console.error("Save settings error:", err)
       alert(err.message || "Failed to save form settings")
@@ -414,9 +386,9 @@ export function FormSettingsDialog({
           >
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={isSaving}>
+          <Button size="sm" onClick={handleDone} disabled={isSaving}>
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Settings
+            {saveSuccess ? "Saved!" : "Done"}
           </Button>
         </DialogFooter>
       </DialogContent>

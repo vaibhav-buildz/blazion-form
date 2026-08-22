@@ -80,6 +80,8 @@ export default async function PublicFormPage({
       ? Number(rawLimit)
       : null
 
+  let initialResponseCount = 0
+
   if (
     responseLimitNum !== null &&
     !isNaN(responseLimitNum) &&
@@ -90,25 +92,13 @@ export default async function PublicFormPage({
       .select("id", { count: "exact", head: true })
       .eq("form_id", form.id)
 
-    const actualCount = responseCount ?? 0
-
-    console.log("DEBUG RESPONSE LIMIT CHECK:", {
-      formId: form.id,
-      slug: form.slug,
-      rawLimitSetting: rawLimit,
-      typeOfRawLimit: typeof rawLimit,
-      parsedLimitNum: responseLimitNum,
-      queryResponseCount: responseCount,
-      countError: countError?.message || null,
-      actualCountUsed: actualCount,
-      isLimitReached: actualCount >= responseLimitNum,
-    })
+    initialResponseCount = responseCount ?? 0
 
     if (countError) {
       console.error("Error querying response count:", countError)
     }
 
-    if (actualCount >= responseLimitNum) {
+    if (initialResponseCount >= responseLimitNum) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-background p-4">
           <div className="text-center space-y-3 max-w-md border border-border bg-card p-8 rounded-lg shadow-sm">
@@ -124,8 +114,6 @@ export default async function PublicFormPage({
     }
   }
 
-
-
   // Fetch questions for this form ordered by position
   const { data: questions } = await supabase
     .from("questions")
@@ -133,8 +121,11 @@ export default async function PublicFormPage({
     .eq("form_id", form.id)
     .order("position", { ascending: true })
 
-  console.log("RAW QUESTIONS FROM DB:", JSON.stringify(questions, null, 2))
-
-  return <PublicFormFill form={form} questions={questions || []} />
-
+  return (
+    <PublicFormFill
+      form={form}
+      questions={questions || []}
+      initialResponseCount={initialResponseCount}
+    />
+  )
 }

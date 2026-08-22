@@ -256,6 +256,7 @@ interface PublicFormFillProps {
     settings?: Record<string, any>
   }
   questions: Question[]
+  initialResponseCount?: number
 }
 
 /**
@@ -442,10 +443,11 @@ export function validateQuestion(question: Question, answers: Record<string, any
   }
 }
 
-export function PublicFormFill({ form, questions }: PublicFormFillProps) {
+export function PublicFormFill({ form, questions, initialResponseCount = 0 }: PublicFormFillProps) {
   const [submitted, setSubmitted] = React.useState(false)
   const [submitError, setSubmitError] = React.useState<string | null>(null)
   const [currentSectionIndex, setCurrentSectionIndex] = React.useState(0)
+  const [submissionsCount, setSubmissionsCount] = React.useState(0)
 
   // Email Verification Mode
   const verificationMode: "none" | "login" | "otp" =
@@ -589,6 +591,7 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     handleSubmit,
     setValue,
     watch,
+    reset,
     setError,
     clearErrors,
     formState: { errors, isSubmitting },
@@ -825,6 +828,7 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
         throw new Error(resData.error || "Failed to submit response")
       }
 
+      setSubmissionsCount((prev) => prev + 1)
       setSubmitted(true)
     } catch (err: any) {
       console.error("Submission error:", err)
@@ -848,6 +852,58 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
     }
   }
 
+  const handleResetForm = () => {
+    // 1. Reset react-hook-form fields
+    reset(
+      questions.reduce((acc, q) => {
+        if (q.type !== "section_break") {
+          acc[q.id] = q.type === "checkbox" ? [] : ""
+        }
+        return acc
+      }, {} as Record<string, any>)
+    )
+
+    // 2. Reset multi-step navigation
+    setCurrentSectionIndex(0)
+
+    // 3. Clear email state
+    setRespondentEmail(verificationMode === "login" && userEmail ? userEmail : "")
+    setRespondentEmailError(null)
+
+    // 4. Clear OTP state
+    setOtpEmailInput("")
+    setOtpCodeInput("")
+    setIsOtpSent(false)
+    setIsOtpSending(false)
+    setIsOtpVerifying(false)
+    setIsOtpVerified(false)
+    setOtpVerifiedEmail("")
+    setOtpError(null)
+    setOtpSuccessMsg(null)
+
+    // 5. Clear submission state
+    setSubmitError(null)
+    setSubmitted(false)
+
+    // 6. Scroll to top
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
+  }
+
+  // Response limit check for "Submit another response" button
+  const rawLimit = form.settings?.response_limit
+  const responseLimitNum =
+    rawLimit !== undefined && rawLimit !== null && rawLimit !== ""
+      ? Number(rawLimit)
+      : null
+  const currentTotalResponses = initialResponseCount + submissionsCount
+  const isLimitReached =
+    responseLimitNum !== null &&
+    !isNaN(responseLimitNum) &&
+    responseLimitNum > 0 &&
+    currentTotalResponses >= responseLimitNum
+
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -859,6 +915,23 @@ export function PublicFormFill({ form, questions }: PublicFormFillProps) {
           <p className="text-muted-foreground text-sm leading-relaxed">
             Your response has been recorded.
           </p>
+
+          {isLimitReached ? (
+            <div className="pt-2 text-xs text-muted-foreground border-t border-border">
+              This form has reached its response limit and is no longer accepting further responses.
+            </div>
+          ) : (
+            <div className="pt-2">
+              <Button
+                type="button"
+                onClick={handleResetForm}
+                variant="outline"
+                className="w-full font-semibold border-border"
+              >
+                Submit another response
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
     )

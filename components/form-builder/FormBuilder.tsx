@@ -62,6 +62,11 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
   const [copied, setCopied] = React.useState(false)
   const [publicUrl, setPublicUrl] = React.useState("")
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
+  const [isMounted, setIsMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
 
   const isLocked = status === "published"
@@ -446,7 +451,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
                   No questions yet. Add one from the left panel.
                 </p>
               </div>
-            ) : (
+            ) : isMounted ? (
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -471,6 +476,20 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
                   </div>
                 </SortableContext>
               </DndContext>
+            ) : (
+              <div className="space-y-4">
+                {questions.map((question) => (
+                  <QuestionCard
+                    key={question.id}
+                    question={question}
+                    disabled={isLocked}
+                    isSelected={selectedQuestionId === question.id}
+                    onSelect={setSelectedQuestionId}
+                    onUpdate={handleUpdateQuestion}
+                    onDelete={handleDeleteQuestion}
+                  />
+                ))}
+              </div>
             )}
           </div>
         </main>
