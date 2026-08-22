@@ -4,6 +4,7 @@ import * as React from "react"
 import { useForm, Controller } from "react-hook-form"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -714,8 +715,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
           <form onSubmit={handleVerifyPassword} className="space-y-4 text-left">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Form Password</Label>
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="Enter password"
                 value={passwordInput}
                 onChange={(e) => {

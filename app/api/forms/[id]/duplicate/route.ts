@@ -87,16 +87,33 @@ export async function POST(
 
     // 4. Duplicate questions
     if (questions && questions.length > 0) {
-      const newQuestions = questions.map((q) => ({
-        form_id: newForm.id,
-        type: q.type,
-        title: q.title,
-        description: q.description,
-        required: q.required,
-        position: q.position,
-        options: q.options,
-        settings: q.settings,
-      }))
+      const idMap = new Map<string, string>()
+      
+      // First pass: generate new IDs and build the map
+      questions.forEach((q) => {
+        idMap.set(q.id, crypto.randomUUID())
+      })
+
+      const newQuestions = questions.map((q) => {
+        // Update any rules to point to the new question IDs
+        const updatedRules = q.rules?.map((rule: any) => ({
+          ...rule,
+          ifQuestionId: idMap.get(rule.ifQuestionId) || rule.ifQuestionId
+        })) || []
+
+        return {
+          id: idMap.get(q.id),
+          form_id: newForm.id,
+          type: q.type,
+          title: q.title,
+          description: q.description,
+          required: q.required,
+          position: q.position,
+          options: q.options,
+          settings: q.settings,
+          rules: updatedRules.length > 0 ? updatedRules : null,
+        }
+      })
 
       const { error: insertQuestionsError } = await supabase
         .from("questions")

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PasswordInput } from "@/components/ui/password-input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -290,8 +291,7 @@ export function FormSettingsDialog({
                     ? "Enter new password to change (leave blank to keep existing password):"
                     : "Set password:"}
                 </Label>
-                <Input
-                  type="password"
+                <PasswordInput
                   placeholder="Enter access password"
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
