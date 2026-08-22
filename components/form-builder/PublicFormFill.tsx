@@ -575,7 +575,8 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
   }
 
   const validateRespondentEmail = (emailStr: string): string | null => {
-    if (!form.settings?.collect_email) return null
+    if (verificationMode === "login") return null
+    if (!form.settings?.collect_email && verificationMode === "none") return null
     const trimmed = (emailStr || "").trim()
     if (!trimmed) {
       return "Email address is required"
@@ -1159,8 +1160,8 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
               className="space-y-6"
             >
 
-          {/* Respondent Email Field (when collect_email setting is enabled) */}
-          {form.settings?.collect_email && safeSectionIndex === 0 && (
+          {/* Respondent Email Field (only when NOT in 'login' mode, and either collect_email is true or mode is 'otp') */}
+          {verificationMode !== "login" && (form.settings?.collect_email || verificationMode === "otp") && safeSectionIndex === 0 && (
             <Card className="p-6 border-border shadow-sm space-y-3">
               <div>
                 <Label htmlFor="respondent-email" className="text-base font-semibold text-foreground flex items-center gap-1">
