@@ -75,32 +75,84 @@ export async function POST(
       serviceRoleKey!
     )
 
+    const now = Date.now()
     const nowIso = new Date().toISOString()
 
-    // Find non-expired record matching form_id, email, and code
+    // Find recent OTP verifications for this form and email
     const { data: records, error: fetchError } = await dbClient
       .from("email_otp_verifications")
-      .select("id, expires_at, verified")
+      .select("*")
       .eq("form_id", form.id)
       .eq("email", cleanEmail)
-      .eq("code", cleanCode)
-      .gte("expires_at", nowIso)
       .order("created_at", { ascending: false })
+      .limit(10)
+
+    console.log("[VERIFY-OTP DEBUG QUERY RESULT]", {
+      submittedFormId: form.id,
+      submittedEmail: cleanEmail,
+      submittedCode: cleanCode,
+      serverNowIso: nowIso,
+      serverNowTime: now,
+      fetchError: fetchError?.message || null,
+      recordsCount: records?.length || 0,
+      records: records?.map((r) => {
+        const expTime = new Date(r.expires_at).getTime()
+        return {
+          id: r.id,
+          code: r.code,
+          codeType: typeof r.code,
+          codeMatch: String(r.code).trim() === cleanCode,
+          expires_at: r.expires_at,
+          expiresAtTime: expTime,
+          isExpired: isNaN(expTime) || expTime < now,
+          verified: r.verified,
+          created_at: r.created_at,
+        }
+      }),
+    })
 
     if (fetchError || !records || records.length === 0) {
       return NextResponse.json(
-        { error: "Invalid or expired verification code. Please request a new code." },
+        { error: "No verification code requested for this email. Please request a new code." },
         { status: 400 }
       )
     }
 
-    const matchingRecord = records[0]
+    // Find the matching unexpired OTP record
+    const matchingRecord = records.find((r) => {
+      const isCodeMatch = String(r.code).trim() === cleanCode
+      const expTime = new Date(r.expires_at).getTime()
+      const isNotExpired = !isNaN(expTime) && expTime >= now
+      return isCodeMatch && isNotExpired
+    })
+
+    if (!matchingRecord) {
+      // Check if code matched an expired record
+      const expiredMatch = records.find(
+        (r) => String(r.code).trim() === cleanCode
+      )
+      if (expiredMatch) {
+        return NextResponse.json(
+          { error: "Verification code has expired. Please request a new code." },
+          { status: 400 }
+        )
+      }
+
+      return NextResponse.json(
+        { error: "Invalid verification code. Please check the code and try again." },
+        { status: 400 }
+      )
+    }
 
     // Mark as verified
-    await dbClient
+    const { error: updateErr } = await dbClient
       .from("email_otp_verifications")
       .update({ verified: true })
       .eq("id", matchingRecord.id)
+
+    if (updateErr) {
+      console.error("[VERIFY-OTP] Failed to update verified status:", updateErr)
+    }
 
     return NextResponse.json({
       success: true,

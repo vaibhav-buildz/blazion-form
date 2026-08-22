@@ -112,17 +112,22 @@ export async function POST(
         serviceRoleKey!
       )
 
-      const nowIso = new Date().toISOString()
+      const now = Date.now()
 
       const { data: verifications, error: verifError } = await adminSupabase
         .from("email_otp_verifications")
-        .select("id, verified")
+        .select("id, verified, expires_at")
         .eq("form_id", form.id)
         .eq("email", cleanEmail)
         .eq("verified", true)
-        .gte("expires_at", nowIso)
+        .order("created_at", { ascending: false })
 
-      if (verifError || !verifications || verifications.length === 0) {
+      const validVerification = verifications?.find((v) => {
+        const expTime = new Date(v.expires_at).getTime()
+        return v.verified && (!isNaN(expTime) && expTime >= now - 60 * 60 * 1000)
+      })
+
+      if (verifError || !validVerification) {
         return NextResponse.json(
           { error: "Email verification required before submission" },
           { status: 403 }
