@@ -65,6 +65,7 @@ export function FormSettingsDialog({
   React.useEffect(() => {
     if (open) {
       const settings = form.settings || {}
+      console.log("[FormSettingsDialog] Syncing draft state from form.settings:", settings)
       setExpiresAt(settings.expires_at || null)
 
       if (settings.expires_at) {
@@ -89,10 +90,12 @@ export function FormSettingsDialog({
       setEnablePassword(Boolean(settings.password_hash))
       setPasswordInput("")
       setNotifyOnResponse(settings.notify_on_response !== false)
-      setEmailVerificationMode(getInitialMode(settings))
+      const mode = getInitialMode(settings)
+      console.log("[FormSettingsDialog] Resolved initial emailVerificationMode:", mode)
+      setEmailVerificationMode(mode)
       setSaveSuccess(false)
     }
-  }, [open])
+  }, [open, form.settings])
 
   const handleClearExpiry = () => {
     setExpiresAt(null)
@@ -149,6 +152,8 @@ export function FormSettingsDialog({
         payloadSettings.clear_password = true
       }
 
+      console.log("[FormSettingsDialog handleDone] Sending payloadSettings:", payloadSettings)
+
       const res = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -161,6 +166,8 @@ export function FormSettingsDialog({
       }
 
       const updatedForm = await res.json()
+      console.log("[FormSettingsDialog handleDone] PATCH response updatedForm:", updatedForm)
+
       if (onSettingsSaved) {
         onSettingsSaved(updatedForm.settings || {})
       }
@@ -186,15 +193,15 @@ export function FormSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md space-y-4">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-4 border-b border-border shrink-0 text-left">
           <DialogTitle className="text-xl font-bold">Form Settings</DialogTitle>
           <DialogDescription>
             Configure optional access rules, expiry date, response limits, and email collection.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-2">
+        <div className="space-y-6 p-6 overflow-y-auto flex-1">
           {/* A) Form Expiry */}
           <div className="space-y-3 border-b border-border pb-4">
             <div className="flex items-center justify-between">
@@ -377,7 +384,7 @@ export function FormSettingsDialog({
           </div>
         </div>
 
-        <DialogFooter className="pt-2 border-t border-border">
+        <DialogFooter className="p-4 border-t border-border bg-background shrink-0 flex flex-row justify-end gap-2">
           <Button
             variant="outline"
             size="sm"

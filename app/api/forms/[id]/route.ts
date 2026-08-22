@@ -40,6 +40,7 @@ export async function PATCH(
 
   try {
     const body = await req.json()
+    console.log("[API PATCH /api/forms/[id]] Incoming request body:", JSON.stringify(body))
 
     // Verify form belongs to user and get existing settings
     const { data: existingForm, error: fetchError } = await supabase
@@ -75,6 +76,7 @@ export async function PATCH(
       }
 
       updateData.settings = mergedSettings
+      console.log("[API PATCH /api/forms/[id]] Writing mergedSettings to Supabase:", mergedSettings)
     }
 
     // Update form
@@ -85,6 +87,10 @@ export async function PATCH(
       .select()
       .single()
 
+    console.log("[API PATCH /api/forms/[id]] Supabase update result:", {
+      updatedFormSettings: updatedForm?.settings,
+      updateError: updateError?.message || null,
+    })
 
     if (updateError) {
       console.error("Error updating form:", updateError)

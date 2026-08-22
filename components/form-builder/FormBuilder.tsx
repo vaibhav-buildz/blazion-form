@@ -328,7 +328,12 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
             open={isSettingsOpen}
             onOpenChange={setIsSettingsOpen}
             onSettingsSaved={(newSettings) => {
-              setForm((prev) => ({ ...prev, settings: newSettings }))
+              console.log("[FormBuilder] onSettingsSaved received newSettings:", newSettings)
+              setForm((prev) => {
+                const updated = { ...prev, settings: newSettings }
+                console.log("[FormBuilder] Updated local form state:", updated)
+                return updated
+              })
             }}
           />
 
