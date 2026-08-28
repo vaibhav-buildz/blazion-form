@@ -3,9 +3,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { FormCard } from "@/components/dashboard/FormCard"
 import { CreateFormButton } from "@/components/dashboard/CreateFormButton"
-
-
-
+import { GenerateWithAIButton } from "@/components/dashboard/GenerateWithAIButton"
 
 export const revalidate = 0
 
@@ -46,7 +44,6 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
 
-
   if (error) {
     console.error("Error fetching forms for user:", user.id, error)
   }
@@ -60,15 +57,21 @@ export default async function DashboardPage() {
             Manage and view your created forms
           </p>
         </div>
-        <CreateFormButton />
+        <div className="flex items-center gap-3">
+          <GenerateWithAIButton />
+          <CreateFormButton />
+        </div>
       </div>
 
       {!forms || forms.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-border p-12 text-center bg-card">
           <p className="text-sm text-muted-foreground mb-4">
-            No forms yet. Create your first form.
+            No forms yet. Create your first form or generate one with AI.
           </p>
-          <CreateFormButton />
+          <div className="flex items-center justify-center gap-3">
+            <GenerateWithAIButton />
+            <CreateFormButton />
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
