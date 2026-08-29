@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { nanoid } from "nanoid"
-import { generateFormFromPrompt } from "@/lib/claude"
+import { generateFormWithAI } from "@/lib/ai"
 
 export async function POST(req: Request) {
   const cookieStore = await cookies()
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       )
     }
 
-    const generated = await generateFormFromPrompt(description)
+    const generated = await generateFormWithAI(description)
 
     const slug = nanoid(10)
     const { data: newForm, error: formError } = await supabase
