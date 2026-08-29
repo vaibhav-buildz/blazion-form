@@ -53,6 +53,13 @@ export function GenerateWithAIButton() {
       const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
+        if (res.status === 429) {
+          setError(
+            data.error ||
+              "AI generation limit reached for today. Please try again later or contact support."
+          )
+          return
+        }
         throw new Error(data.error || "AI generation failed, please try again")
       }
 

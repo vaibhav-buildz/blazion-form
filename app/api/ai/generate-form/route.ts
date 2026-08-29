@@ -99,6 +99,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ formId: newForm.id })
   } catch (error: any) {
     console.error("AI form generation route error:", error)
+    if (error?.message === "AI_QUOTA_EXCEEDED") {
+      return NextResponse.json(
+        { error: "AI generation limit reached for today. Please try again later or contact support." },
+        { status: 429 }
+      )
+    }
     return NextResponse.json(
       { error: "AI generation failed, please try again" },
       { status: 500 }
