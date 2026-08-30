@@ -1,8 +1,17 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Fraunces } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
+
+const fraunces = Fraunces({ 
+  subsets: ['latin'],
+  weight: ['500', '600'],
+  variable: '--font-fraunces',
+});
 
 export const metadata: Metadata = {
   title: 'Blazion Form — India-First AI Form Builder',
@@ -16,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
-      <body className={`${inter.className} min-h-full antialiased`}>
+      <body className={`${inter.variable} ${fraunces.variable} min-h-full antialiased`}>
         {children}
       </body>
     </html>

@@ -910,7 +910,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <Card className="max-w-md w-full p-8 text-center space-y-4 border-border shadow-lg">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
             <CheckCircle2 className="h-8 w-8" />
           </div>
           <h2 className="text-2xl font-bold text-foreground">Thank you!</h2>
@@ -972,8 +972,8 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
           {/* Verified Badges */}
           {verificationMode === "login" && userEmail && (
             <div className="pt-2">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-success/10 border border-success/20 text-success text-xs font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                 <span>Verified as: <strong className="font-semibold">{userEmail}</strong> ✓</span>
               </div>
             </div>
@@ -981,8 +981,8 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
           {verificationMode === "otp" && isOtpVerified && (
             <div className="pt-2">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-medium">
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-success/10 border border-success/20 text-success text-xs font-medium">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
                 <span>Verified email: <strong className="font-semibold">{otpVerifiedEmail}</strong> ✓</span>
               </div>
             </div>
@@ -1095,7 +1095,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
                   />
                 </div>
                 {otpSuccessMsg && (
-                  <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                  <p className="text-xs font-medium text-success">
                     {otpSuccessMsg}
                   </p>
                 )}

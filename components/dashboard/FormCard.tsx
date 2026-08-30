@@ -110,7 +110,7 @@ export function FormCard({ form }: FormCardProps) {
             <span
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 font-medium ${
                 form.status === "published"
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  ? "bg-success/10 text-success border border-success/20"
                   : "bg-muted text-muted-foreground border border-border"
               }`}
             >

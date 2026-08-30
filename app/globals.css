@@ -9,35 +9,38 @@
 
 @layer base {
   :root {
-    --background: #FAFAF5;
-    --foreground: #2D3319;
+    --background: #F1E9DD;
+    --foreground: #2B2320;
 
-    --card: #FFFFFF;
-    --card-foreground: #2D3319;
+    --card: #FBF7F0;
+    --card-foreground: #2B2320;
 
-    --popover: #FFFFFF;
-    --popover-foreground: #2D3319;
+    --popover: #FBF7F0;
+    --popover-foreground: #2B2320;
 
-    --primary: #4A5D23;
-    --primary-foreground: #FFFFFF;
+    --primary: #C4622D;
+    --primary-foreground: #FBF7F0;
 
-    --secondary: #A9B388;
-    --secondary-foreground: #2D3319;
+    --secondary: #E2D5C4;
+    --secondary-foreground: #2B2320;
 
-    --muted: #F0F0E8;
-    --muted-foreground: #6B7355;
+    --muted: #E2D5C4;
+    --muted-foreground: #6B5D50;
 
-    --accent: #A9B388;
-    --accent-foreground: #2D3319;
+    --accent: #1F6F6B;
+    --accent-foreground: #FBF7F0;
 
-    --destructive: #B33A3A;
-    --destructive-foreground: #FFFFFF;
+    --destructive: #B3432B;
+    --destructive-foreground: #FBF7F0;
 
-    --border: #D4D8C4;
-    --input: #D4D8C4;
-    --ring: #4A5D23;
+    --success: #3F7A5E;
+    --success-foreground: #FBF7F0;
 
-    --radius: 0.5rem;
+    --border: #E2D5C4;
+    --input: #E2D5C4;
+    --ring: #C4622D;
+
+    --radius: 0.75rem;
   }
 }
 
@@ -66,6 +69,9 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -73,6 +79,9 @@
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
+
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-fraunces);
 }
 
 @layer base {
@@ -81,6 +90,10 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
   }
 }
 
@@ -95,10 +108,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(107, 115, 85, 0.3);
+  background: rgba(107, 93, 80, 0.3); /* --muted-foreground at 30% */
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(74, 93, 35, 0.5);
+  background: rgba(43, 35, 32, 0.5); /* --foreground at 50% */
 }

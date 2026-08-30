@@ -45,7 +45,7 @@ export function generateNotificationEmail({
                 : rawAnswer
 
             return `
-              <div style="margin-bottom: 12px; padding: 12px 16px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #4A5D23;">
+              <div style="margin-bottom: 12px; padding: 12px 16px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #C4622D;">
                 <div style="font-weight: 600; color: #2d3748; font-size: 14px; margin-bottom: 4px;">${escapeHtml(
                   pair.question
                 )}</div>
@@ -71,7 +71,7 @@ export function generateNotificationEmail({
     <tr>
       <td align="center">
         <div style="max-width: 600px; width: 100%; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left;">
-          <div style="background-color: #4A5D23; padding: 24px 32px;">
+          <div style="background-color: #C4622D; padding: 24px 32px;">
             <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Blazion Form</h1>
           </div>
           <div style="padding: 32px;">
@@ -89,7 +89,7 @@ export function generateNotificationEmail({
             <div style="text-align: center; margin-top: 32px; margin-bottom: 12px;">
               <a href="${escapeHtml(
                 responseUrl
-              )}" target="_blank" style="background-color: #4A5D23; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(74, 93, 35, 0.2);">
+              )}" target="_blank" style="background-color: #C4622D; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 14px; display: inline-block; box-shadow: 0 2px 4px rgba(196, 98, 45, 0.2);">
                 View all responses
               </a>
             </div>
@@ -117,7 +117,7 @@ export function generateRespondentConfirmationEmail({
           .map((pair) => {
             const rawAnswer = pair.answer ?? ""
             return `
-              <div style="margin-bottom: 12px; padding: 12px 16px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #4A5D23;">
+              <div style="margin-bottom: 12px; padding: 12px 16px; background-color: #f8f9fa; border-radius: 6px; border-left: 3px solid #C4622D;">
                 <div style="font-weight: 600; color: #2d3748; font-size: 14px; margin-bottom: 4px;">${escapeHtml(
                   pair.question
                 )}</div>
@@ -143,7 +143,7 @@ export function generateRespondentConfirmationEmail({
     <tr>
       <td align="center">
         <div style="max-width: 600px; width: 100%; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left;">
-          <div style="background-color: #4A5D23; padding: 24px 32px;">
+          <div style="background-color: #C4622D; padding: 24px 32px;">
             <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Blazion Form</h1>
           </div>
           <div style="padding: 32px;">

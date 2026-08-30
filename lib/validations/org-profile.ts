@@ -16,8 +16,8 @@ export const orgProfileSchema = z.object({
     "Other",
   ]),
   tagline: z.string().max(100, { message: "Tagline cannot exceed 100 characters." }).optional(),
-  primary_color: z.string().default("#4A5D23"),
-  accent_color: z.string().default("#A9B388"),
+  primary_color: z.string().default("#C4622D"),
+  accent_color: z.string().default("#1F6F6B"),
   website_url: z
     .string()
     .url({ message: "Please enter a valid URL." })

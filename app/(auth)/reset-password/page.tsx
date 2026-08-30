@@ -79,7 +79,7 @@ export default function ResetPasswordPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {successMessage ? (
-            <div className="rounded-md bg-emerald-500/10 p-4 text-sm font-medium text-emerald-600">
+            <div className="rounded-md bg-success/10 p-4 text-sm font-medium text-success">
               {successMessage}
             </div>
           ) : (

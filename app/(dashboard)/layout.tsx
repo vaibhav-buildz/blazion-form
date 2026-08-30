@@ -1,32 +1,47 @@
+"use client"
+
 import * as React from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
+
+  const navItems = [
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Settings", href: "/dashboard/settings/identity" },
+    { name: "Profile", href: "/dashboard/profile" },
+  ]
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <aside className="w-64 h-full border-r border-border bg-card p-6 flex flex-col justify-between shrink-0">
+      <aside className="w-64 h-full border-r border-border bg-[#E2D5C4] py-6 flex flex-col justify-between shrink-0">
         <div>
-          <div className="mb-8">
-            <h1 className="text-lg font-semibold text-foreground">Blazion Form</h1>
+          <div className="mb-8 px-6">
+            <h1 className="text-lg font-semibold text-foreground font-heading">Blazion Form</h1>
           </div>
           <nav className="space-y-1">
-            <Link
-              href="/dashboard"
-              className="block w-full rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/dashboard/settings/identity"
-              className="block w-full rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              Settings
-            </Link>
+            {navItems.map((item) => {
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`block w-full px-6 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "border-l-4 border-primary bg-transparent text-foreground"
+                      : "border-l-4 border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              )
+            })}
           </nav>
         </div>
       </aside>

@@ -85,14 +85,14 @@ export function GenerateWithAIButton() {
           variant="outline"
           className="gap-2 border-accent/70 bg-gradient-to-r from-accent/15 via-accent/25 to-accent/15 hover:bg-accent/30 text-foreground font-medium shadow-xs ring-1 ring-accent/30 hover:ring-accent/60 transition-all duration-200"
         >
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Sparkles className="h-4 w-4 text-accent" />
           <span>Generate with AI</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
-            <Sparkles className="h-5 w-5 text-primary" />
+            <Sparkles className="h-5 w-5 text-accent" />
             Generate Form with AI
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
@@ -138,7 +138,7 @@ export function GenerateWithAIButton() {
             <Button
               type="submit"
               disabled={loading || !description.trim()}
-              className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+              className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
             >
               {loading ? (
                 <>

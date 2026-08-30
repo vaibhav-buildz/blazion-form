@@ -367,9 +367,9 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
 
       {/* Public URL Bar when Published */}
       {status === "published" && (
-        <div className="bg-emerald-500/10 border-b border-emerald-500/20 px-6 py-2 flex items-center justify-between gap-4 text-sm shrink-0">
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-medium shrink-0">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="bg-success/10 border-b border-success/20 px-6 py-2 flex items-center justify-between gap-4 text-sm shrink-0">
+          <div className="flex items-center gap-2 text-success font-medium shrink-0">
+            <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
             Form is Live
           </div>
           <div className="flex items-center gap-2 flex-1 max-w-xl">
@@ -386,7 +386,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
             >
               {copied ? (
                 <>
-                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  <Check className="h-3.5 w-3.5 text-success" />
                   Copied!
                 </>
               ) : (

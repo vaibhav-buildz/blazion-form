@@ -298,7 +298,7 @@ export function FormSettingsDialog({
                   className="h-9 text-xs"
                 />
                 {hasExistingHash && !passwordInput && (
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                  <p className="text-xs text-success font-medium">
                     Password protection is currently enabled.
                   </p>
                 )}

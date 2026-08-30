@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { createClient } from "@/lib/supabase"
 import { orgProfileSchema, type OrgProfileInput } from "@/lib/validations/org-profile"
 import { Button } from "@/components/ui/button"
-import { SignOutButton } from "@/components/SignOutButton"
 import {
   Card,
   CardContent,
@@ -80,8 +79,8 @@ export default function IdentitySettingsPage() {
       org_name: "",
       org_type: "Company" as const,
       tagline: "",
-      primary_color: "#4A5D23",
-      accent_color: "#A9B388",
+      primary_color: "#C4622D",
+      accent_color: "#1F6F6B",
       website_url: "",
       contact_email: "",
     },
@@ -114,8 +113,8 @@ export default function IdentitySettingsPage() {
             org_name: data.org_name || "",
             org_type: (data.org_type as any) || "Company",
             tagline: data.tagline || "",
-            primary_color: data.primary_color || "#4A5D23",
-            accent_color: data.accent_color || "#A9B388",
+            primary_color: data.primary_color || "#C4622D",
+            accent_color: data.accent_color || "#1F6F6B",
             website_url: data.website_url || "",
             contact_email: data.contact_email || "",
           })
@@ -480,26 +479,6 @@ export default function IdentitySettingsPage() {
           </Form>
         </CardContent>
       </Card>
-
-      {/* Account Session / Sign Out Section */}
-      <div className="pt-6 border-t border-border">
-        <Card className="border-destructive/20 bg-destructive/5">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold text-foreground">
-              Account Session
-            </CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              Sign out of your account on this device. You will need to log back in to access your dashboard and manage forms.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SignOutButton
-              variant="outline"
-              className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors font-medium"
-            />
-          </CardContent>
-        </Card>
-      </div>
     </div>
   )
 }
