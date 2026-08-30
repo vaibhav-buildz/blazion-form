@@ -1,6 +1,5 @@
 import * as React from "react"
 import Link from "next/link"
-import { SignOutButton } from "@/components/SignOutButton"
 
 export default function DashboardLayout({
   children,
@@ -35,9 +34,7 @@ export default function DashboardLayout({
       {/* Main Container */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 items-center justify-end border-b border-border bg-card px-8 shrink-0">
-          <SignOutButton />
-        </header>
+        <header className="flex h-16 items-center justify-end border-b border-border bg-card px-8 shrink-0" />
 
         {/* Scrollable Main Content */}
         <main className="flex-1 overflow-y-auto bg-background">

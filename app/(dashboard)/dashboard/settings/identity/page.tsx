@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { createClient } from "@/lib/supabase"
 import { orgProfileSchema, type OrgProfileInput } from "@/lib/validations/org-profile"
 import { Button } from "@/components/ui/button"
+import { SignOutButton } from "@/components/SignOutButton"
 import {
   Card,
   CardContent,
@@ -479,6 +480,26 @@ export default function IdentitySettingsPage() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Account Session / Sign Out Section */}
+      <div className="pt-6 border-t border-border">
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold text-foreground">
+              Account Session
+            </CardTitle>
+            <CardDescription className="text-xs text-muted-foreground">
+              Sign out of your account on this device. You will need to log back in to access your dashboard and manage forms.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SignOutButton
+              variant="outline"
+              className="border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors font-medium"
+            />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

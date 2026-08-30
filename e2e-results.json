@@ -2,7 +2,7 @@
   {
     "test": 1,
     "name": "SETTINGS PERSISTENCE",
-    "result": "PASS",
-    "details": "All 4 settings (Date=2026-08-22, Time=23:50, Limit=2, Password=Enabled, Mode=OTP) persisted correctly before and after F5 refresh."
+    "result": "FAIL",
+    "details": "Mismatch found in settings persistence check."
   }
 ]
