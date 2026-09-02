@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
@@ -77,6 +78,7 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export default function SignupPage() {
+  const router = useRouter()
   const supabase = createClient()
   const [error, setError] = React.useState<string | null>(null)
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
@@ -126,8 +128,12 @@ export default function SignupPage() {
         return
       }
 
-      setSuccessMessage("Check your email to confirm your account")
-      form.reset()
+      // TODO: [TEMPORARY] Email verification has been disabled in Supabase for testing.
+      // We automatically redirect to the dashboard. Re-enable email confirmation before production
+      // and revert this back to showing the "Check your email" message.
+      router.push("/dashboard")
+      // setSuccessMessage("Check your email to confirm your account")
+      // form.reset()
     } catch (err: any) {
       setError(err?.message || "An unexpected error occurred.")
     } finally {

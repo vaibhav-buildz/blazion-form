@@ -60,6 +60,32 @@ export async function POST(
       )
     }
 
+    // Check response limit enforcement
+    if (form.settings?.response_limit) {
+      const limit = parseInt(form.settings.response_limit, 10)
+      if (!isNaN(limit) && limit > 0) {
+        const serviceRoleKey =
+          process.env.SUPABASE_SERVICE_ROLE_KEY ||
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+        const tempAdmin = createSupabaseAdminClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          serviceRoleKey!
+        )
+        const { count, error: countError } = await tempAdmin
+          .from("responses")
+          .select("*", { count: "exact", head: true })
+          .eq("form_id", form.id)
+
+        if (!countError && count !== null && count >= limit) {
+          return NextResponse.json(
+            { error: "This form has reached its response limit." },
+            { status: 403 }
+          )
+        }
+      }
+    }
+
 
     const body = await req.json()
     console.log("INCOMING SUBMIT BODY:", JSON.stringify(body, null, 2))
@@ -75,6 +101,17 @@ export async function POST(
     const mode: "none" | "login" | "otp" =
       form.settings?.email_verification_mode ||
       (form.settings?.collect_email ? "otp" : "none")
+
+    const cleanEmail = respondent_email ? respondent_email.trim().toLowerCase() : ""
+
+    const serviceRoleKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    const adminSupabase = createSupabaseAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey!
+    )
 
     let verifiedRespondentEmail: string | null = null
     let verificationMethod: "login" | "otp" | null = null
@@ -94,23 +131,12 @@ export async function POST(
       verifiedRespondentEmail = user.email
       verificationMethod = "login"
     } else if (mode === "otp") {
-      if (!respondent_email || typeof respondent_email !== "string" || !respondent_email.trim()) {
+      if (!cleanEmail) {
         return NextResponse.json(
           { error: "Respondent email is required for OTP verification" },
           { status: 400 }
         )
       }
-
-      const cleanEmail = respondent_email.trim().toLowerCase()
-
-      const serviceRoleKey =
-        process.env.SUPABASE_SERVICE_ROLE_KEY ||
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      const adminSupabase = createSupabaseAdminClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        serviceRoleKey!
-      )
 
       const now = Date.now()
 
@@ -155,8 +181,8 @@ export async function POST(
       insertRow.verification_method = verificationMethod
     }
 
-    // Insert response into responses table
-    let { data: response, error: insertError } = await supabase
+    // Insert response into responses table using adminSupabase to bypass RLS for public submissions
+    let { data: response, error: insertError } = await adminSupabase
       .from("responses")
       .insert([insertRow])
       .select()
@@ -165,7 +191,7 @@ export async function POST(
     if (insertError && verificationMethod && insertError.message?.includes("verification_method")) {
       console.warn("Retrying response insert without verification_method column...")
       delete insertRow.verification_method
-      const fallbackResult = await supabase
+      const fallbackResult = await adminSupabase
         .from("responses")
         .insert([insertRow])
         .select()
@@ -218,7 +244,7 @@ export async function POST(
               console.error("Error fetching file size from storage:", err)
             }
 
-            const { error: fileInsertError } = await supabase
+            const { error: fileInsertError } = await adminSupabase
               .from("file_uploads")
               .insert([
                 {

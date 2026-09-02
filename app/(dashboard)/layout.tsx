@@ -20,7 +20,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar */}
-      <aside className="w-64 h-full border-r border-border bg-[#E2D5C4] py-6 flex flex-col justify-between shrink-0">
+      <aside className="w-64 h-full border-r border-border bg-secondary py-6 flex flex-col justify-between shrink-0">
         <div>
           <div className="mb-8 px-6">
             <h1 className="text-lg font-semibold text-foreground font-heading">Blazion Form</h1>

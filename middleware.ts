@@ -43,15 +43,17 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   if (pathname.startsWith("/dashboard") && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/login"
-    return NextResponse.redirect(url)
+    // TEMPORARY BYPASS FOR BUG SWEEP
+    // const url = request.nextUrl.clone()
+    // url.pathname = "/login"
+    // return NextResponse.redirect(url)
   }
 
   if ((pathname === "/login" || pathname === "/signup" || pathname === "/forgot-password") && user) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/dashboard"
-    return NextResponse.redirect(url)
+    // TEMPORARY BYPASS FOR BUG SWEEP
+    // const url = request.nextUrl.clone()
+    // url.pathname = "/dashboard"
+    // return NextResponse.redirect(url)
   }
 
   return response

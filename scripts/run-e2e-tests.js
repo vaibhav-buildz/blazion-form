@@ -153,7 +153,7 @@ async function runAllTests() {
 
     // Click Done
     await dialog.locator('button:has-text("Done")').click()
-    await page.waitForSelector('div[role="dialog"]', { state: "detached", timeout: 5000 })
+    await page.waitForSelector('text=Form Settings', { state: "hidden", timeout: 5000 })
     console.log("[TEST 1] Clicked Done")
 
     // Reopen dialog immediately (1st check)
@@ -178,7 +178,7 @@ async function runAllTests() {
 
     // Close dialog
     await dialog.locator('button:has-text("Cancel")').click()
-    await page.waitForSelector('div[role="dialog"]', { state: "detached" })
+    await page.waitForSelector('text=Form Settings', { state: "hidden" })
 
     // Hard refresh (F5)
     console.log("[TEST 1] Performing hard refresh (F5)...")
@@ -205,7 +205,16 @@ async function runAllTests() {
     })
 
     await page.screenshot({ path: `${SCREENSHOT_DIR}/test1_after_refresh.png` })
+    // Close dialog from 2nd check
     await dialog.locator('button:has-text("Cancel")').click()
+    await page.waitForSelector('text=Form Settings', { state: "hidden" })
+    
+    // Open dialog to disable OTP for subsequent tests
+    await page.click('button:has-text("Settings")')
+    await page.waitForSelector('text=Form Settings', { timeout: 5000 })
+    await page.locator('#verify-none').click()
+    await dialog.locator('button:has-text("Done")').click()
+    await page.waitForSelector('text=Form Settings', { state: "hidden" })
 
     if (
       date1Val === dateVal && time1Val === timeVal && limit1Val === "2" && pass1Checked && pass1Notice && otp1Checked &&
@@ -238,7 +247,7 @@ async function runAllTests() {
     }
     await dialog.locator('#verify-none').click()
     await dialog.locator('button:has-text("Done")').click()
-    await page.waitForSelector('div[role="dialog"]', { state: "detached" })
+    await page.waitForSelector('text=Form Settings', { state: "hidden" })
 
     // Publish form
     console.log("[TEST 2] Publishing form...")
@@ -263,7 +272,12 @@ async function runAllTests() {
     await handlePasswordGateIfPresent(subPage, "testpass123")
     await fillAllVisibleFields(subPage, "Response 1")
     await subPage.click('button[type="submit"]')
-    await subPage.waitForSelector('text=Thank', { timeout: 10000 })
+    try {
+      await subPage.waitForSelector('text=Thank', { timeout: 10000 })
+    } catch (e) {
+      await subPage.screenshot({ path: `${SCREENSHOT_DIR}/test2_submission_failed.png` })
+      throw e
+    }
     console.log("[TEST 2] Response #1 submitted successfully")
 
     // Response 2
@@ -382,9 +396,9 @@ async function runAllTests() {
     await loginTestPage.screenshot({ path: `${SCREENSHOT_DIR}/test4_login_gate.png` })
 
     const loginGateVisible =
-      (await loginTestPage.locator('text=Log in to access this form').isVisible()) ||
+      (await loginTestPage.locator('text=Log in to respond').isVisible()) ||
       (await loginTestPage.locator('text=Authentication Required').isVisible()) ||
-      (await loginTestPage.locator('button:has-text("Log in")').isVisible())
+      (await loginTestPage.locator('a:has-text("Log in")').isVisible())
 
     console.log(`[TEST 4] Login gate visible for logged-out user: ${loginGateVisible}`)
 
@@ -493,12 +507,20 @@ async function runAllTests() {
     let test6Passed = false
     let test6Details = ""
 
+    // Unpublish first so the form is editable
+    const unpublishBtn = page.locator('button:has-text("Unpublish")')
+    if (await unpublishBtn.isVisible()) {
+      console.log("[TEST 6] Unpublishing form to allow edits...")
+      await unpublishBtn.click()
+      await page.waitForTimeout(1000)
+    }
+
     // Clear settings to mode=none
     await page.click('button:has-text("Settings")')
     await page.waitForSelector('div[role="dialog"]')
     await dialog.locator('#verify-none').click()
     await dialog.locator('button:has-text("Done")').click()
-    await page.waitForSelector('div[role="dialog"]', { state: "detached" })
+    await page.waitForSelector('text=Form Settings', { state: "hidden" })
 
     // Add Section Break if not present
     await page.click('button:has-text("Section Break")')

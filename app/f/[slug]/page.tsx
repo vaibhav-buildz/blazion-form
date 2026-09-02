@@ -87,7 +87,22 @@ export default async function PublicFormPage({
     !isNaN(responseLimitNum) &&
     responseLimitNum > 0
   ) {
-    const { count: responseCount, error: countError } = await supabase
+    const serviceRoleKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    const adminSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      serviceRoleKey!,
+      {
+        cookies: {
+          getAll() { return cookieStore.getAll() },
+          setAll() {},
+        }
+      }
+    )
+
+    const { count: responseCount, error: countError } = await adminSupabase
       .from("responses")
       .select("id", { count: "exact", head: true })
       .eq("form_id", form.id)
