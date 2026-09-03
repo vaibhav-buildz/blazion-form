@@ -20,7 +20,7 @@ export default function DashboardLayout({
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       {/* Sidebar */}
-      <aside className="w-64 h-screen sticky top-0 border-r border-border bg-secondary py-6 flex flex-col justify-between shrink-0 overflow-y-auto">
+      <aside className="w-64 h-full border-r border-border bg-secondary py-6 flex flex-col justify-between shrink-0 overflow-y-auto">
         <div>
           <div className="mb-8 px-6">
             <h1 className="text-lg font-semibold text-foreground font-heading">Blazion Form</h1>
@@ -47,12 +47,12 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Container */}
-      <div className="flex flex-1 flex-col h-screen overflow-hidden min-w-0">
+      <div className="flex flex-1 flex-col min-w-0 min-h-0">
         {/* Top bar */}
         <header className="flex h-16 items-center justify-end border-b border-border bg-card px-8 shrink-0" />
 
         {/* Scrollable Main Content */}
-        <main className="flex-1 overflow-y-auto bg-background">
+        <main className="flex-1 overflow-y-auto min-h-0 bg-background">
           {children}
         </main>
       </div>
