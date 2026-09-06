@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         respondent_email,
         answers,
         metadata,
-        created_at,
+        submitted_at,
         forms:form_id (
           id,
           title,
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
         )
       `)
       .eq("respondent_email", email)
-      .order("created_at", { ascending: false })
+      .order("submitted_at", { ascending: false })
 
     if (error) {
       console.error("Portal fetch error:", error)
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
         formId: r.form_id,
         formTitle: formInfo?.title || "Untitled Form",
         formSlug: formInfo?.slug,
-        createdAt: r.created_at,
+        createdAt: r.submitted_at,
         status: metadata.approval_status || "submitted",
         certificateUrl: metadata.certificate_url || null,
         personaReport: metadata.persona_report || null,

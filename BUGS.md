@@ -25,3 +25,14 @@
    - **Description:** When a form requires Login to submit, the login gate isn't showing up properly for logged-out users, or the session handling in the public form is flawed.
    - **Steps to Reproduce:** Set form to require Login. Visit the public URL as an unauthenticated user. The form might still be visible or bypass the gate.
    - **Severity:** Major (FALSE ALARM: The E2E test script was checking for the wrong text inside an anchor tag. Fixed the E2E script.)
+
+5. **Column Name Discrepancy on Responses Table (Resolved)**
+   - **Page/Component:** `app/api/portal/submissions/route.ts` & `app/api/v1/forms/[id]/submissions/route.ts`
+   - **Description:** The `responses` table schema defines `submitted_at` as the timestamp column rather than `created_at`. New queries targeting `created_at` threw a PostgreSQL error.
+   - **Resolution:** Replaced all `created_at` references on the `responses` table with `submitted_at`. Verified via both manual testing and `test-new-features.js`.
+   - **Severity:** Medium (FIXED)
+
+## Verification Status Summary
+- **All 6 Real Browser MS Edge E2E Tests:** Passed cleanly (Settings persistence, response limit enforcement, republish URL invalidation, login-gate verification, OTP verification & invalid rejection, multi-step flow).
+- **New Extended Feature Tests (`test-new-features.js`):** Passed (Respondent Portal API, Developer API v1 POST & GET, Portal Submission Lookup).
+- **TypeScript Compilation:** 0 errors across entire workspace (`npx tsc --noEmit`).

@@ -52,9 +52,9 @@ export async function GET(
 
     const { data: submissions, error } = await supabaseAdmin
       .from("responses")
-      .select("id, respondent_email, answers, metadata, created_at")
+      .select("id, respondent_email, answers, metadata, submitted_at")
       .eq("form_id", formId)
-      .order("created_at", { ascending: false })
+      .order("submitted_at", { ascending: false })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
@@ -141,7 +141,7 @@ export async function POST(
             respondent_email: respondent_email || null,
             answers,
             metadata: newResponse.metadata,
-            submitted_at: newResponse.created_at,
+            submitted_at: newResponse.submitted_at,
           }),
         }).catch((wErr) => console.warn("Webhook dispatch error:", wErr))
       } catch (wErr) {
@@ -152,7 +152,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       response_id: newResponse.id,
-      created_at: newResponse.created_at,
+      submitted_at: newResponse.submitted_at,
       is_spam: isSpam,
     })
   } catch (err: any) {
