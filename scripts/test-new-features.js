@@ -95,6 +95,73 @@ async function runFeatureTests() {
         console.log("[TEST 5 Result]: Found submission in portal =", found)
         results.push({ name: "Respondent Portal Lookup", passed: Boolean(found) })
 
+        // 6. Test Developer API v1 forms list
+        console.log("\n[TEST 6] Testing Developer API v1 GET /api/v1/forms...")
+        const listFormsRes = await fetch(`${BASE_URL}/api/v1/forms`, {
+          headers: { "x-api-key": "blz_dev_test_secret_12345" }
+        })
+        const listFormsJson = await listFormsRes.json()
+        console.log("[TEST 6 Result]:", { status: listFormsRes.status, total: listFormsJson.total })
+        results.push({ name: "Developer API v1 Forms List", passed: listFormsRes.status === 200 && listFormsJson.total >= 1 })
+
+        // 7. Test Developer API v1 form creation
+        console.log("\n[TEST 7] Testing Developer API v1 POST /api/v1/forms...")
+        const createFormRes = await fetch(`${BASE_URL}/api/v1/forms`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": "blz_dev_test_secret_12345"
+          },
+          body: JSON.stringify({
+            title: "Automated Suite Created Form",
+            description: "Built through programmatic developer API",
+            questions: [
+              { title: "Candidate Name", type: "short_text", required: true },
+              { title: "WhatsApp Number", type: "phone", required: true }
+            ]
+          })
+        })
+        const createFormJson = await createFormRes.json()
+        console.log("[TEST 7 Result]:", { status: createFormRes.status, success: createFormJson.success, formId: createFormJson.form?.id })
+        results.push({ name: "Developer API v1 Form Create", passed: createFormRes.status === 200 && createFormJson.success })
+
+        if (createFormJson.form?.id) {
+          await supabaseAdmin.from("questions").delete().eq("form_id", createFormJson.form.id)
+          await supabaseAdmin.from("forms").delete().eq("id", createFormJson.form.id)
+        }
+
+        // 8. Test AI Form Auditor API
+        console.log("\n[TEST 8] Testing AI Form Auditor API (POST /api/ai/audit)...")
+        const auditRes = await fetch(`${BASE_URL}/api/ai/audit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            formTitle: "College Hackathon Registration",
+            formDescription: "Register student developer teams",
+            questions: [
+              { id: "q1", title: "Name", type: "short_text", required: true },
+              { id: "q2", title: "Phone", type: "phone", required: true }
+            ]
+          })
+        })
+        const auditJson = await auditRes.json()
+        console.log("[TEST 8 Result]:", { status: auditRes.status, hasFeedback: Boolean(auditJson.overallHealth || auditJson.feedback) })
+        results.push({ name: "AI Form Auditor API", passed: auditRes.status === 200 && Boolean(auditJson.overallHealth || auditJson.feedback) })
+
+        // 9. Test AI Field Suggestions API
+        console.log("\n[TEST 9] Testing AI Smart Field Suggestions API (POST /api/ai/suggest-fields)...")
+        const suggestRes = await fetch(`${BASE_URL}/api/ai/suggest-fields`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            formTitle: "Clinic Appointment Booking",
+            currentQuestionTitles: ["Patient Name", "Symptoms"]
+          })
+        })
+        const suggestJson = await suggestRes.json()
+        console.log("[TEST 9 Result]:", { status: suggestRes.status, count: suggestJson.suggestions?.length })
+        results.push({ name: "AI Smart Field Suggestions API", passed: suggestRes.status === 200 && Array.isArray(suggestJson.suggestions) })
+
         // Cleanup test form & response
         await supabaseAdmin.from("responses").delete().eq("form_id", form.id)
         await supabaseAdmin.from("forms").delete().eq("id", form.id)

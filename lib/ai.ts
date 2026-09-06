@@ -43,6 +43,40 @@ export function isQuotaError(err: any): boolean {
   )
 }
 
+export const MODELS_TO_TRY = Array.from(
+  new Set(
+    [
+      process.env.GEMINI_MODEL,
+      "gemini-3.8-flash",
+      "gemini-3.6-flash",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+    ].filter(Boolean) as string[]
+  )
+)
+
+export async function callGemini(contents: string, config?: any) {
+  let lastErr: any = null
+  for (const model of MODELS_TO_TRY) {
+    try {
+      const res = await ai.models.generateContent({
+        model,
+        contents,
+        config,
+      })
+      if (res && res.text) {
+        return res
+      }
+    } catch (err: any) {
+      if (isQuotaError(err)) {
+        throw new Error("AI_QUOTA_EXCEEDED")
+      }
+      lastErr = err
+    }
+  }
+  throw lastErr || new Error("Gemini AI service unavailable")
+}
+
 export async function generateFormWithAI(prompt: string): Promise<GeneratedFormData> {
   if (!process.env.GEMINI_API_KEY) {
     throw new Error("GEMINI_API_KEY is not configured in environment variables.")
@@ -64,38 +98,11 @@ export async function generateFormWithAI(prompt: string): Promise<GeneratedFormD
 
 Return ONLY valid JSON matching this schema.`
 
-  const primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash"
-  const modelsToTry = Array.from(
-    new Set([primaryModel, "gemini-3.6-flash", "gemini-2.0-flash", "gemini-1.5-flash"])
-  )
-
-  let responseText = ""
-  let lastError: any = null
-
-  for (const model of modelsToTry) {
-    try {
-      console.log(`[Gemini AI] Generating form content with model: ${model}`)
-      const res = await ai.models.generateContent({
-        model,
-        contents: prompt.trim(),
-        config: {
-          systemInstruction,
-          responseMimeType: "application/json",
-        },
-      })
-      if (res && res.text) {
-        responseText = res.text
-        break
-      }
-    } catch (err: any) {
-      if (isQuotaError(err)) {
-        console.warn(`[Gemini AI] Quota / Rate limit error detected on model ${model}`)
-        throw new Error("AI_QUOTA_EXCEEDED")
-      }
-      console.warn(`[Gemini AI] Model ${model} returned error:`, err?.message || err)
-      lastError = err
-    }
-  }
+  const res = await callGemini(prompt.trim(), {
+    systemInstruction,
+    responseMimeType: "application/json",
+  })
+  const responseText = res.text || ""
 
   if (!responseText) {
     if (isQuotaError(lastError)) {
@@ -189,20 +196,15 @@ Respond with JSON:
   ]
 }`
 
-  const primaryModel = process.env.GEMINI_MODEL || "gemini-2.5-flash"
-  const res = await ai.models.generateContent({
-    model: primaryModel,
-    contents: prompt,
-    config: {
+  try {
+    const res = await callGemini(prompt, {
       systemInstruction: "You are an expert UX and survey design auditor. Return ONLY valid JSON.",
       responseMimeType: "application/json",
-    },
-  })
-
-  try {
+    })
     const text = res.text || "{}"
     return JSON.parse(text.replace(/```(?:json)?/g, "").trim())
-  } catch {
+  } catch (err: any) {
+    console.warn("AI audit fallback triggered:", err?.message)
     return {
       overallScore: 85,
       summary: "Form is reasonably well structured.",
@@ -248,13 +250,9 @@ Respond with a JSON array of 3 objects:
 ]`
 
   try {
-    const res = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "Return ONLY a JSON array of 3 suggested form fields.",
-        responseMimeType: "application/json",
-      },
+    const res = await callGemini(prompt, {
+      systemInstruction: "Return ONLY a JSON array of 3 suggested form fields.",
+      responseMimeType: "application/json",
     })
     const text = res.text || "[]"
     const parsed = JSON.parse(text.replace(/```(?:json)?/g, "").trim())
@@ -305,13 +303,9 @@ Return ONLY valid JSON matching this structure:
 }`
 
   try {
-    const res = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are an expert data analyst. Provide clear, executive-level summaries.",
-        responseMimeType: "application/json",
-      },
+    const res = await callGemini(prompt, {
+      systemInstruction: "You are an expert data analyst. Provide clear, executive-level summaries.",
+      responseMimeType: "application/json",
     })
     const text = res.text || "{}"
     return JSON.parse(text.replace(/```(?:json)?/g, "").trim())
@@ -347,12 +341,8 @@ ${JSON.stringify(answers, null, 2)}
 Generate a friendly, personalized report directly addressed to the respondent based on their responses. Use markdown formatting with bullet points and encouragement. Keep it engaging and concise (2-4 paragraphs).`
 
   try {
-    const res = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: "You are a helpful, professional personal assessment guide.",
-      },
+    const res = await callGemini(prompt, {
+      systemInstruction: "You are a helpful, professional personal assessment guide.",
     })
     return res.text || "Thank you for your submission!"
   } catch (err) {
@@ -399,12 +389,8 @@ UserAgent: ${userAgent || "unknown"}
 Rate the authenticity from 0.0 (definite bot/spam) to 1.0 (definite authentic human).
 Return JSON: { "score": number, "reason": "brief reason" }`
 
-    const res = await ai.models.generateContent({
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
+    const res = await callGemini(prompt, {
+      responseMimeType: "application/json",
     })
     const parsed = JSON.parse((res.text || "{}").replace(/```(?:json)?/g, "").trim())
     const score = typeof parsed.score === "number" ? parsed.score : 0.9
