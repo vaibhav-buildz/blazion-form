@@ -5,6 +5,7 @@ import { FormCard } from "@/components/dashboard/FormCard"
 import { CreateFormButton } from "@/components/dashboard/CreateFormButton"
 import { GenerateWithAIButton } from "@/components/dashboard/GenerateWithAIButton"
 import { TemplatesModalButton } from "@/components/dashboard/TemplatesModalButton"
+import { TeamWorkspaceModal } from "@/components/dashboard/TeamWorkspaceModal"
 
 export const revalidate = 0
 
@@ -59,6 +60,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <TeamWorkspaceModal />
           <TemplatesModalButton />
           <GenerateWithAIButton />
           <CreateFormButton />
@@ -71,6 +73,7 @@ export default async function DashboardPage() {
             No forms yet. Create your first form, generate one with AI, or pick from our ready-made templates.
           </p>
           <div className="flex items-center justify-center gap-3">
+            <TeamWorkspaceModal />
             <TemplatesModalButton />
             <GenerateWithAIButton />
             <CreateFormButton />
