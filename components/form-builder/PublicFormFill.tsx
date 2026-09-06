@@ -21,7 +21,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase"
 import { CheckCircle2, Loader2, Lock, Upload, FileText, Trash2, Mail, Sparkles, Award, Globe, Wifi, WifiOff, Phone, HelpCircle, Mic } from "lucide-react"
 import { z } from "zod"
-import { SUPPORTED_LANGUAGES, useLanguage } from "@/lib/i18n"
+import { SUPPORTED_LANGUAGES, useLanguage, LanguageToggle } from "@/lib/i18n"
 import { SignatureCanvas } from "@/components/form-viewer/SignatureCanvas"
 import { VoiceInputButton } from "@/components/form-viewer/VoiceInputButton"
 import { SlotBookingPicker } from "@/components/form-viewer/SlotBookingPicker"
@@ -1178,9 +1178,12 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
         {/* Form Title & Description Header Card */}
         <Card className="p-8 border-border shadow-sm space-y-3">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">
-            {form.title}
-          </h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-3xl font-bold text-foreground tracking-tight flex-1">
+              {form.title}
+            </h1>
+            <LanguageToggle className="shrink-0" />
+          </div>
           {form.description && (
             <p className="text-muted-foreground leading-relaxed text-sm">
               {form.description}

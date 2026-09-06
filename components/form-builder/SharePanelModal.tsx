@@ -162,6 +162,84 @@ export function SharePanelModal({
               Paste this HTML snippet into WordPress, Webflow, Shopify, or any HTML page.
             </p>
           </div>
+
+          {/* 4. CSV Bulk Contact Upload (Item 14) */}
+          <div className="space-y-3 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                Bulk Contact Broadcast (CSV)
+              </label>
+              <span className="text-[11px] text-muted-foreground">
+                {contacts.length > 0 ? `${contacts.length} contacts loaded` : "Upload contact list"}
+              </span>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Upload a CSV file containing <code className="text-foreground font-mono">name</code>, <code className="text-foreground font-mono">phone</code>, and <code className="text-foreground font-mono">email</code> columns to broadcast this form to your audience.
+            </p>
+
+            <div className="flex flex-col gap-2">
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={handleCsvUpload}
+                className="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/10 file:text-emerald-700 hover:file:bg-emerald-500/20 cursor-pointer"
+              />
+              {csvError && <p className="text-xs text-destructive font-medium">{csvError}</p>}
+            </div>
+
+            {contacts.length > 0 && (
+              <div className="space-y-2 mt-2">
+                <div className="max-h-40 overflow-y-auto border border-border rounded-xl text-xs">
+                  <table className="min-w-full divide-y divide-border">
+                    <thead className="bg-muted/50 text-[11px] font-semibold text-muted-foreground uppercase">
+                      <tr>
+                        <th className="py-2 px-3 text-left">#</th>
+                        <th className="py-2 px-3 text-left">Name</th>
+                        <th className="py-2 px-3 text-left">Phone</th>
+                        <th className="py-2 px-3 text-left">Email</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border bg-card">
+                      {contacts.slice(0, 10).map((c, i) => (
+                        <tr key={i} className="hover:bg-muted/20">
+                          <td className="py-1.5 px-3 text-muted-foreground font-mono">{i + 1}</td>
+                          <td className="py-1.5 px-3 font-medium text-foreground">{c.name || "—"}</td>
+                          <td className="py-1.5 px-3 text-foreground font-mono">{c.phone || "—"}</td>
+                          <td className="py-1.5 px-3 text-muted-foreground">{c.email || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {contacts.length > 10 && (
+                  <p className="text-[11px] text-muted-foreground italic">
+                    Showing first 10 of {contacts.length} parsed contacts.
+                  </p>
+                )}
+
+                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/20 p-3 rounded-xl border border-border">
+                  <div className="text-xs text-muted-foreground space-y-0.5">
+                    <span className="font-semibold text-foreground block">SMS / WhatsApp Gateway</span>
+                    <span>Direct sending requires MSG91 API configuration.</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted text-muted-foreground text-xs font-bold cursor-not-allowed opacity-75 border border-border shrink-0"
+                    title="External SMS/WhatsApp integration is pending future MSG91 API key setup"
+                  >
+                    <span>Send Broadcast</span>
+                    <span className="bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                      Coming soon (MSG91)
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

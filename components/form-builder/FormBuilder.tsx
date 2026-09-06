@@ -16,6 +16,7 @@ import { SmartFieldSuggestions } from "./SmartFieldSuggestions"
 import { SharePanelModal } from "./SharePanelModal"
 import { ThemeStudioModal, FormTheme } from "./ThemeStudioModal"
 import { VersionHistoryModal, FormVersion } from "./VersionHistoryModal"
+import { LanguageToggle } from "@/lib/i18n"
 
 import {
   DndContext,
@@ -387,6 +388,9 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Multilingual Switcher */}
+          <LanguageToggle className="mr-1" />
+
           {/* AI Auditor Button */}
           <Button
             variant="outline"
