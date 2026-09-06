@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, Fraunces } from 'next/font/google';
 import './globals.css';
+import { PwaRegister } from '@/components/providers/PwaRegister';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -16,6 +17,7 @@ const fraunces = Fraunces({
 export const metadata: Metadata = {
   title: 'Blazion Form — India-First AI Form Builder',
   description: 'Build official, branded forms with AI insights, identity branding, regional languages, and seamless integrations.',
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -26,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className={`${inter.variable} ${fraunces.variable} h-full antialiased`} suppressHydrationWarning>
+        <PwaRegister />
         {children}
       </body>
     </html>

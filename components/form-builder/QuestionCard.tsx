@@ -43,7 +43,11 @@ const TYPE_LABELS: Record<string, string> = {
   dropdown: "Dropdown",
   file_upload: "File Upload",
   section_break: "Section Break",
+  signature: "E-Signature",
+  phone: "Indian Phone (+91)",
+  slot_booking: "Slot Booking",
 }
+
 
 export function QuestionCard({
   question,
@@ -264,6 +268,23 @@ export function QuestionCard({
                   · max {question.settings?.maxSizeMB ?? 5}MB)
                 </p>
               </div>
+            ) : question.type === "signature" ? (
+              <div className="h-24 w-full rounded-lg border-2 border-dashed border-border bg-muted/20 flex flex-col items-center justify-center text-muted-foreground text-xs">
+                <span>Sign here with pen or finger</span>
+                <span className="text-[10px] opacity-60 mt-1">E-signature capture canvas</span>
+              </div>
+            ) : question.type === "phone" ? (
+              <div className="flex items-center gap-2 max-w-sm">
+                <span className="px-3 py-2 rounded-md border border-input bg-muted text-xs font-semibold text-muted-foreground">
+                  🇮🇳 +91
+                </span>
+                <Input disabled placeholder="98765 43210" className="bg-muted/50 text-muted-foreground" />
+              </div>
+            ) : question.type === "slot_booking" ? (
+              <div className="p-3 rounded-lg border border-input bg-muted/30 text-xs text-muted-foreground space-y-1">
+                <div className="font-semibold text-foreground">Interactive Appointment Slot Booking</div>
+                <div className="opacity-75">Date picker with dynamic available 30-min time slots</div>
+              </div>
             ) : (
               <Input
                 disabled
@@ -276,6 +297,7 @@ export function QuestionCard({
                 }
               />
             )}
+
           </div>
 
           <div

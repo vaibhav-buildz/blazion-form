@@ -19,10 +19,15 @@ import {
 } from "@/components/ui/select"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase"
-import { CheckCircle2, Loader2, Lock, Upload, FileText, Trash2, Mail } from "lucide-react"
+import { CheckCircle2, Loader2, Lock, Upload, FileText, Trash2, Mail, Sparkles, Award, Globe, Wifi, WifiOff, Phone, HelpCircle, Mic } from "lucide-react"
 import { z } from "zod"
+import { SUPPORTED_LANGUAGES, useLanguage } from "@/lib/i18n"
+import { SignatureCanvas } from "@/components/form-viewer/SignatureCanvas"
+import { VoiceInputButton } from "@/components/form-viewer/VoiceInputButton"
+import { SlotBookingPicker } from "@/components/form-viewer/SlotBookingPicker"
 
 import { type QuestionRule } from "./QuestionCard"
+
 
 function formatBytes(bytes: number, decimals = 1) {
   if (!bytes || bytes === 0) return "0 Bytes"
@@ -435,7 +440,37 @@ export function validateQuestion(question: Question, answers: Record<string, any
       return null
     }
 
+    case "phone": {
+      const strVal = typeof value === "string" ? value.trim() : ""
+      if (!strVal) {
+        return "This question is required"
+      }
+      const digitsOnly = strVal.replace(/\D/g, "")
+      const last10 = digitsOnly.length > 10 ? digitsOnly.slice(-10) : digitsOnly
+      if (question.settings?.strictIndianPhone !== false) {
+        if (!/^[6-9]\d{9}$/.test(last10)) {
+          return "Please enter a valid 10-digit Indian phone number (e.g. 9876543210)"
+        }
+      }
+      return null
+    }
+
+    case "signature": {
+      if (!value || typeof value !== "string" || !value.trim()) {
+        return "Signature is required"
+      }
+      return null
+    }
+
+    case "slot_booking": {
+      if (!value || typeof value !== "string" || !value.trim()) {
+        return "Please select an appointment date and slot"
+      }
+      return null
+    }
+
     default: {
+
       if (!value || (typeof value === "string" && !value.trim())) {
         return "This question is required"
       }
@@ -474,6 +509,62 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
   const [otpError, setOtpError] = React.useState<string | null>(null)
   const [otpSuccessMsg, setOtpSuccessMsg] = React.useState<string | null>(null)
 
+  // Submissions result & offline state
+  const [submissionResult, setSubmissionResult] = React.useState<any>(null)
+  const [wasOfflineSubmission, setWasOfflineSubmission] = React.useState(false)
+  const [conversationalMode, setConversationalMode] = React.useState(
+    Boolean(form.settings?.conversational_mode)
+  )
+  const [conversationalIndex, setConversationalIndex] = React.useState(0)
+  const [isOnline, setIsOnline] = React.useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  )
+
+  const { language, setLanguage } = useLanguage()
+
+  // Offline queue auto-sync listener
+  React.useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true)
+      try {
+        const queueRaw = localStorage.getItem("blazion_offline_queue")
+        if (!queueRaw) return
+        const queue = JSON.parse(queueRaw)
+        if (Array.isArray(queue) && queue.length > 0) {
+          const remaining = []
+          for (const item of queue) {
+            try {
+              const res = await fetch(`/api/forms/${item.formSlug || item.formId}/submit`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(item.payload),
+              })
+              if (!res.ok) remaining.push(item)
+            } catch {
+              remaining.push(item)
+            }
+          }
+          if (remaining.length > 0) {
+            localStorage.setItem("blazion_offline_queue", JSON.stringify(remaining))
+          } else {
+            localStorage.removeItem("blazion_offline_queue")
+          }
+        }
+      } catch (e) {
+        console.warn("Offline sync error:", e)
+      }
+    }
+
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
   const sections = React.useMemo(() => parseSections(questions), [questions])
   const totalSections = sections.length
   const safeSectionIndex = Math.min(currentSectionIndex, Math.max(0, totalSections - 1))
@@ -486,6 +577,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
   const [passwordInput, setPasswordInput] = React.useState("")
   const [passwordError, setPasswordError] = React.useState<string | null>(null)
   const [isVerifyingPassword, setIsVerifyingPassword] = React.useState(false)
+
 
   // Check Supabase session client-side on mount for mode 'login' (and pre-fill fallback)
   React.useEffect(() => {
@@ -814,6 +906,22 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
     console.log("SUBMITTING FORM ANSWERS:", payload)
     setSubmitError(null)
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      try {
+        const queueRaw = localStorage.getItem("blazion_offline_queue")
+        const queue = queueRaw ? JSON.parse(queueRaw) : []
+        queue.push({ formSlug: form.slug, formId: form.id, payload, timestamp: Date.now() })
+        localStorage.setItem("blazion_offline_queue", JSON.stringify(queue))
+        setWasOfflineSubmission(true)
+        setSubmissionsCount((prev) => prev + 1)
+        setSubmitted(true)
+        return
+      } catch (e) {
+        console.error("Local queue storage error:", e)
+      }
+    }
+
     try {
       console.log("POSTing payload to:", `/api/forms/${form.slug || form.id}/submit`, payload)
       const res = await fetch(`/api/forms/${form.slug || form.id}/submit`, {
@@ -830,9 +938,23 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
         throw new Error(resData.error || "Failed to submit response")
       }
 
+      setSubmissionResult(resData)
+      setWasOfflineSubmission(false)
       setSubmissionsCount((prev) => prev + 1)
       setSubmitted(true)
     } catch (err: any) {
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        try {
+          const queueRaw = localStorage.getItem("blazion_offline_queue")
+          const queue = queueRaw ? JSON.parse(queueRaw) : []
+          queue.push({ formSlug: form.slug, formId: form.id, payload, timestamp: Date.now() })
+          localStorage.setItem("blazion_offline_queue", JSON.stringify(queue))
+          setWasOfflineSubmission(true)
+          setSubmissionsCount((prev) => prev + 1)
+          setSubmitted(true)
+          return
+        } catch {}
+      }
       console.error("Submission error:", err)
       setSubmitError(err.message || "Something went wrong. Please try again.")
     }
@@ -918,6 +1040,47 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
             Your response has been recorded.
           </p>
 
+          {wasOfflineSubmission && (
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 rounded-lg text-xs flex items-center gap-2 text-left">
+              <WifiOff className="w-4 h-4 shrink-0" />
+              <span>
+                <strong>Saved offline.</strong> Your response has been queued locally and will sync automatically once internet access is restored.
+              </span>
+            </div>
+          )}
+
+          {submissionResult?.certificateUrl && (
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/20 rounded-xl space-y-2 text-left">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-semibold text-sm">
+                <Award className="w-4 h-4 text-emerald-600" />
+                <span>Completion Certificate</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                An official certificate of completion has been generated for your submission.
+              </p>
+              <a
+                href={submissionResult.certificateUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-full px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors shadow-sm"
+              >
+                Download Official Certificate (PDF)
+              </a>
+            </div>
+          )}
+
+          {submissionResult?.personaReport && (
+            <div className="p-4 bg-purple-50 dark:bg-purple-950/30 border border-purple-500/20 rounded-xl space-y-2 text-left">
+              <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-semibold text-sm">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+                <span>AI Persona Feedback</span>
+              </div>
+              <p className="text-xs text-foreground/90 whitespace-pre-line leading-relaxed font-sans">
+                {submissionResult.personaReport}
+              </p>
+            </div>
+          )}
+
           {isLimitReached ? (
             <div className="pt-2 text-xs text-muted-foreground border-t border-border">
               This form has reached its response limit and is no longer accepting further responses.
@@ -939,24 +1102,79 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
     )
   }
 
+  const theme = form.settings?.theme || {}
+  const containerStyle: React.CSSProperties = {
+    backgroundColor: theme.backgroundColor || undefined,
+    fontFamily: theme.fontFamily ? `${theme.fontFamily}, sans-serif` : undefined,
+    color: theme.textColor || undefined,
+  }
+
+  const answeredCount = Object.keys(answers).filter(
+    (k) => answers[k] && (!Array.isArray(answers[k]) || answers[k].length > 0)
+  ).length
+  const progressPercent = Math.min(
+    100,
+    Math.round((answeredCount / Math.max(1, questions.length)) * 100)
+  )
+  const estRemainingMins = Math.max(
+    1,
+    Math.ceil((questions.length - answeredCount) * 0.3)
+  )
+
   return (
-    <div className="min-h-screen bg-background py-12 px-4 sm:px-6">
+    <div className="min-h-screen bg-background py-12 px-4 sm:px-6" style={containerStyle}>
       <div className="mx-auto max-w-2xl space-y-6">
-        {/* Multi-step Progress Bar */}
-        {totalSections > 1 && (
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              <span>Step {safeSectionIndex + 1} of {totalSections}</span>
-              <span>{Math.round(((safeSectionIndex + 1) / totalSections) * 100)}% Completed</span>
-            </div>
-            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all duration-300 ease-in-out"
-                style={{ width: `${((safeSectionIndex + 1) / totalSections) * 100}%` }}
-              />
-            </div>
+        {/* Language selector & Offline notice top bar */}
+        <div className="flex items-center justify-between">
+          <div>
+            {!isOnline && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                <WifiOff className="w-3.5 h-3.5" /> Offline Mode (auto-sync enabled)
+              </span>
+            )}
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <Select value={language} onValueChange={(val: any) => setLanguage(val)}>
+              <SelectTrigger className="h-8 text-xs bg-card border-border w-[140px] gap-1.5 shadow-sm">
+                <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_LANGUAGES.map((lang: any) => (
+                  <SelectItem key={lang.code} value={lang.code} className="text-xs">
+                    {lang.nativeName} ({lang.name})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Dynamic Progress Bar */}
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <span>
+              {totalSections > 1
+                ? `Step ${safeSectionIndex + 1} of ${totalSections} (${progressPercent}%)`
+                : `${progressPercent}% Completed`}
+            </span>
+            <span className="text-[11px] font-normal lowercase text-muted-foreground">
+              ~{estRemainingMins} min left
+            </span>
+          </div>
+          <div className="h-2 w-full bg-muted rounded-full overflow-hidden shadow-inner">
+            <div
+              className="h-full bg-primary transition-all duration-300 ease-in-out"
+              style={{
+                width:
+                  totalSections > 1
+                    ? `${((safeSectionIndex + 1) / totalSections) * 100}%`
+                    : `${progressPercent}%`,
+              }}
+            />
+          </div>
+        </div>
+
 
         {/* Form Title & Description Header Card */}
         <Card className="p-8 border-border shadow-sm space-y-3">
@@ -1241,20 +1459,26 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
                         return (
                           <div className="space-y-1.5">
-                            <Input
-                              {...field}
-                              value={val}
-                              maxLength={hasMaxChars ? maxChars : undefined}
-                              onChange={(e) => {
-                                let newValue = e.target.value
-                                if (hasMaxChars && newValue.length > maxChars) {
-                                  newValue = newValue.slice(0, maxChars)
-                                }
-                                field.onChange(newValue)
-                              }}
-                              placeholder={question.settings?.placeholder || "Your answer"}
-                              className="w-full"
-                            />
+                            <div className="flex items-center gap-2">
+                              <Input
+                                {...field}
+                                value={val}
+                                maxLength={hasMaxChars ? maxChars : undefined}
+                                onChange={(e) => {
+                                  let newValue = e.target.value
+                                  if (hasMaxChars && newValue.length > maxChars) {
+                                    newValue = newValue.slice(0, maxChars)
+                                  }
+                                  field.onChange(newValue)
+                                }}
+                                placeholder={question.settings?.placeholder || "Your answer"}
+                                className="w-full"
+                              />
+                              <VoiceInputButton
+                                currentValue={val}
+                                onTranscript={(transcript) => field.onChange(transcript)}
+                              />
+                            </div>
                             {hasMaxChars && (
                               <div className="flex justify-end text-xs">
                                 <span
@@ -1284,21 +1508,29 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
                         return (
                           <div className="space-y-1.5">
-                            <Textarea
-                              {...field}
-                              value={val}
-                              maxLength={hasMaxChars ? maxChars : undefined}
-                              onChange={(e) => {
-                                let newValue = e.target.value
-                                if (hasMaxChars && newValue.length > maxChars) {
-                                  newValue = newValue.slice(0, maxChars)
-                                }
-                                field.onChange(newValue)
-                              }}
-                              placeholder={question.settings?.placeholder || "Your answer"}
-                              rows={4}
-                              className="w-full resize-y"
-                            />
+                            <div className="relative">
+                              <Textarea
+                                {...field}
+                                value={val}
+                                maxLength={hasMaxChars ? maxChars : undefined}
+                                onChange={(e) => {
+                                  let newValue = e.target.value
+                                  if (hasMaxChars && newValue.length > maxChars) {
+                                    newValue = newValue.slice(0, maxChars)
+                                  }
+                                  field.onChange(newValue)
+                                }}
+                                placeholder={question.settings?.placeholder || "Your answer"}
+                                rows={4}
+                                className="w-full resize-y pr-10"
+                              />
+                              <div className="absolute top-2 right-2">
+                                <VoiceInputButton
+                                  currentValue={val}
+                                  onTranscript={(transcript) => field.onChange(transcript)}
+                                />
+                              </div>
+                            </div>
                             {hasMaxChars && (
                               <div className="flex justify-end text-xs">
                                 <span
@@ -1436,6 +1668,52 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
                             field={field}
                           />
                         )
+
+                      case "signature":
+                        return (
+                          <SignatureCanvas
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        )
+
+                      case "phone":
+                        return (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-md border border-input bg-muted text-foreground select-none shrink-0">
+                                <span>🇮🇳</span>
+                                <span>+91</span>
+                              </span>
+                              <Input
+                                type="tel"
+                                maxLength={10}
+                                placeholder="9876543210"
+                                value={field.value || ""}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 10)
+                                  field.onChange(digits)
+                                }}
+                                className="w-full tracking-wide text-base font-mono"
+                              />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              Enter 10-digit Indian mobile number
+                            </p>
+                          </div>
+                        )
+
+                      case "slot_booking":
+                        return (
+                          <SlotBookingPicker
+                            formId={form.id}
+                            questionId={question.id}
+                            settings={question.settings}
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        )
+
 
                       default:
                         return (

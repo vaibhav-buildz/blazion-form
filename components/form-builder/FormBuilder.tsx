@@ -9,8 +9,13 @@ import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { QuestionCard, type Question } from "./QuestionCard"
 import { QuestionSettings } from "./QuestionSettings"
-import { Copy, Check, Settings, Split } from "lucide-react"
+import { Copy, Check, Settings, Split, Sparkles, Palette, Share2, History } from "lucide-react"
 import { FormSettingsDialog } from "./FormSettingsDialog"
+import { FormAuditorModal } from "./FormAuditorModal"
+import { SmartFieldSuggestions } from "./SmartFieldSuggestions"
+import { SharePanelModal } from "./SharePanelModal"
+import { ThemeStudioModal, FormTheme } from "./ThemeStudioModal"
+import { VersionHistoryModal, FormVersion } from "./VersionHistoryModal"
 
 import {
   DndContext,
@@ -25,7 +30,6 @@ import {
   verticalListSortingStrategy,
   arrayMove,
 } from "@dnd-kit/sortable"
-
 
 interface FormBuilderProps {
   form: {
@@ -46,6 +50,9 @@ const QUESTION_TYPES = [
   { id: "checkbox", label: "Checkbox" },
   { id: "dropdown", label: "Dropdown" },
   { id: "file_upload", label: "File Upload" },
+  { id: "signature", label: "E-Signature" },
+  { id: "phone", label: "Indian Phone (+91)" },
+  { id: "slot_booking", label: "Slot Booking" },
 ]
 
 export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBuilderProps) {
@@ -62,7 +69,12 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
   const [copied, setCopied] = React.useState(false)
   const [publicUrl, setPublicUrl] = React.useState("")
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
+  const [isAuditorOpen, setIsAuditorOpen] = React.useState(false)
+  const [isShareOpen, setIsShareOpen] = React.useState(false)
+  const [isThemeOpen, setIsThemeOpen] = React.useState(false)
+  const [isHistoryOpen, setIsHistoryOpen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
+
 
   React.useEffect(() => {
     setIsMounted(true)
@@ -119,15 +131,41 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
       // Always generate a new unique slug when publishing from draft
       const newSlug = nanoid(10)
       const titleToSave = title.trim() || "Untitled Form"
+
+      const existingVersions: FormVersion[] = form.settings?.versions || []
+      const snapshot: FormVersion = {
+        id: crypto.randomUUID(),
+        versionNumber: existingVersions.length + 1,
+        publishedAt: new Date().toISOString(),
+        questions: JSON.parse(JSON.stringify(questions)),
+        title: titleToSave,
+        settings: form.settings || {},
+      }
+      const updatedVersions = [...existingVersions, snapshot]
+      const updatedSettings = {
+        ...(form.settings || {}),
+        versions: updatedVersions,
+      }
+
       const res = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "published", slug: newSlug, title: titleToSave }),
+        body: JSON.stringify({
+          status: "published",
+          slug: newSlug,
+          title: titleToSave,
+          settings: updatedSettings,
+        }),
       })
       if (res.ok) {
         setStatus("published")
         setSlug(newSlug)
-        setForm((prev) => ({ ...prev, slug: newSlug, status: "published" }))
+        setForm((prev) => ({
+          ...prev,
+          slug: newSlug,
+          status: "published",
+          settings: updatedSettings,
+        }))
         if (typeof window !== "undefined") {
           setPublicUrl(`${window.location.origin}/f/${newSlug}`)
         }
@@ -141,6 +179,42 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
       setIsPublishing(false)
     }
   }
+
+  const handleRollback = async (version: FormVersion) => {
+    try {
+      setQuestions(version.questions)
+      setTitle(version.title)
+      setForm((prev) => ({ ...prev, title: version.title, settings: version.settings || prev.settings }))
+      await fetch(`/api/forms/${form.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: version.title,
+          settings: version.settings || form.settings,
+        }),
+      })
+      for (const q of version.questions) {
+        await fetch(`/api/questions/${q.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(q),
+        }).catch(() => {})
+      }
+    } catch (err) {
+      console.error("Rollback error:", err)
+    }
+  }
+
+  const handleSaveTheme = async (newTheme: FormTheme) => {
+    const updatedSettings = { ...(form.settings || {}), theme: newTheme }
+    setForm((prev) => ({ ...prev, settings: updatedSettings }))
+    await fetch(`/api/forms/${form.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings: updatedSettings }),
+    })
+  }
+
 
 
   const handleUnpublish = async () => {
@@ -312,7 +386,47 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* AI Auditor Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAuditorOpen(true)}
+            className="h-9 gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50/50"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-indigo-500" /> Audit
+          </Button>
+
+          {/* Theme Studio Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsThemeOpen(true)}
+            className="h-9 gap-1.5 text-xs border-border"
+          >
+            <Palette className="h-3.5 w-3.5 text-pink-500" /> Theme
+          </Button>
+
+          {/* Share Panel Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsShareOpen(true)}
+            className="h-9 gap-1.5 text-xs border-border"
+          >
+            <Share2 className="h-3.5 w-3.5 text-blue-500" /> Share
+          </Button>
+
+          {/* Version History Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsHistoryOpen(true)}
+            className="h-9 gap-1.5 text-xs border-border"
+          >
+            <History className="h-3.5 w-3.5 text-purple-500" /> History
+          </Button>
+
           {/* Settings Dialog Button */}
           <Button
             variant="outline"
@@ -322,6 +436,39 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
           >
             <Settings className="h-3.5 w-3.5 text-muted-foreground" /> Settings
           </Button>
+
+          <FormAuditorModal
+            open={isAuditorOpen}
+            onOpenChange={setIsAuditorOpen}
+            formTitle={title}
+            formDescription=""
+            questions={questions}
+            onSelectQuestion={(qId) => setSelectedQuestionId(qId)}
+          />
+
+          <SharePanelModal
+            open={isShareOpen}
+            onOpenChange={setIsShareOpen}
+            formTitle={title}
+            formSlug={slug}
+            formId={form.id}
+          />
+
+          <ThemeStudioModal
+            open={isThemeOpen}
+            onOpenChange={setIsThemeOpen}
+            initialTheme={form.settings?.theme}
+            formTitle={title}
+            onSave={handleSaveTheme}
+          />
+
+          <VersionHistoryModal
+            open={isHistoryOpen}
+            onOpenChange={setIsHistoryOpen}
+            versions={form.settings?.versions || []}
+            currentQuestions={questions}
+            onRollback={handleRollback}
+          />
 
           <FormSettingsDialog
             form={form}
@@ -336,6 +483,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
               })
             }}
           />
+
 
 
           {isLocked ? (
@@ -449,6 +597,53 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
                 placeholder="Untitled Form"
               />
             </Card>
+
+            {!isLocked && (
+              <SmartFieldSuggestions
+                formTitle={title}
+                currentQuestions={questions}
+                onAddSuggestedField={async (suggested) => {
+                  const newOrder = questions.length
+                  const tempId = `temp_${Date.now()}`
+                  const newQuestion: Question = {
+                    id: tempId,
+                    title: suggested.title,
+                    type: suggested.type,
+                    required: false,
+                    position: newOrder,
+                    options: suggested.options || (["multiple_choice", "checkbox", "dropdown"].includes(suggested.type) ? ["Option 1", "Option 2"] : undefined),
+                    rules: [],
+                    settings: {},
+                  }
+                  setQuestions((prev) => [...prev, newQuestion])
+                  setSelectedQuestionId(tempId)
+
+                  try {
+                    const res = await fetch(`/api/forms/${form.id}/questions`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        title: suggested.title,
+                        type: suggested.type,
+                        required: false,
+                        order: newOrder,
+                        options: newQuestion.options,
+                        settings: {},
+                        rules: [],
+                      }),
+                    })
+                    if (res.ok) {
+                      const saved = await res.json()
+                      setQuestions((prev) => prev.map((q) => (q.id === tempId ? saved : q)))
+                      setSelectedQuestionId(saved.id)
+                    }
+                  } catch (err) {
+                    console.error("Error creating suggested question", err)
+                  }
+                }}
+              />
+            )}
+
 
             {questions.length === 0 ? (
               <div className="rounded-lg border-2 border-dashed border-border p-12 text-center bg-card">

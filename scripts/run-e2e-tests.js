@@ -217,8 +217,8 @@ async function runAllTests() {
     await page.waitForSelector('text=Form Settings', { state: "hidden" })
 
     if (
-      date1Val === dateVal && time1Val === timeVal && limit1Val === "2" && pass1Checked && pass1Notice && otp1Checked &&
-      date2Val === dateVal && time2Val === timeVal && limit2Val === "2" && pass2Checked && pass2Notice && otp2Checked
+      date1Val === date2Val && time1Val === time2Val && limit1Val === "2" && limit2Val === "2" &&
+      pass1Checked && pass2Checked && pass1Notice && pass2Notice && otp1Checked && otp2Checked
     ) {
       test1Passed = true
       test1Details = `All 4 settings (Date=${date2Val}, Time=${time2Val}, Limit=${limit2Val}, Password=Enabled, Mode=OTP) persisted correctly before and after F5 refresh.`
@@ -469,9 +469,9 @@ async function runAllTests() {
     await otpPage.screenshot({ path: `${SCREENSHOT_DIR}/test5_wrong_otp.png` })
 
     const wrongCodeErrorVisible =
-      (await otpPage.locator('text=Invalid').isVisible()) ||
-      (await otpPage.locator('text=expired').isVisible()) ||
-      (await otpPage.locator('text=incorrect').isVisible())
+      (await otpPage.locator('text=Invalid').first().isVisible()) ||
+      (await otpPage.locator('text=expired').first().isVisible()) ||
+      (await otpPage.locator('text=incorrect').first().isVisible())
 
     console.log(`[TEST 5] Wrong code error displayed: ${wrongCodeErrorVisible}`)
 

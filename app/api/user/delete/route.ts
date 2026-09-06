@@ -81,7 +81,9 @@ export async function POST(req: Request) {
 
     // 2. Delete org profile & profile records
     await supabaseAdmin.from("org_profiles").delete().eq("user_id", user.id)
-    await supabaseAdmin.from("profiles").delete().eq("id", user.id).catch(() => {})
+    try {
+      await supabaseAdmin.from("profiles").delete().eq("id", user.id)
+    } catch {}
 
     // 3. Delete auth user record via Admin API
     const { error: deleteUserError } =

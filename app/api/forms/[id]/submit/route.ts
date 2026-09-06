@@ -7,6 +7,10 @@ import {
   generateNotificationEmail,
   generateRespondentConfirmationEmail,
 } from "@/lib/email/notification-template"
+import { evaluateSpamScoreWithAI, generatePersonaReportWithAI } from "@/lib/ai"
+import { generateCertificatePdf } from "@/lib/certificate"
+import { createApprovalToken } from "@/lib/approval-token"
+
 
 export async function POST(
   req: Request,
@@ -170,9 +174,33 @@ export async function POST(
       verificationMethod = null
     }
 
+    // AI Spam/Bot Authenticity Scoring (Batch A #5)
+    const clientIp = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown"
+    const userAgent = req.headers.get("user-agent") || ""
+    const spamCheck = await evaluateSpamScoreWithAI(answers, clientIp, userAgent)
+
+    // AI Persona Report (Batch A #4)
+    let personaReport: string | null = null
+    if (form.settings?.aiPersonaPrompt && typeof form.settings.aiPersonaPrompt === "string" && form.settings.aiPersonaPrompt.trim()) {
+      try {
+        personaReport = await generatePersonaReportWithAI(form.settings.aiPersonaPrompt, answers, form.title || "Form")
+      } catch (pErr) {
+        console.warn("Persona report generation skipped on error:", pErr)
+      }
+    }
+
+    const metadata: Record<string, any> = {
+      spamScore: spamCheck.score,
+      isFlaggedSpam: spamCheck.isFlagged,
+      spamReason: spamCheck.reason,
+      personaReport: personaReport || undefined,
+      submittedAt: new Date().toISOString(),
+    }
+
     const insertRow: Record<string, any> = {
       form_id: form.id,
       answers,
+      metadata,
     }
     if (verifiedRespondentEmail) {
       insertRow.respondent_email = verifiedRespondentEmail
@@ -187,6 +215,7 @@ export async function POST(
       .insert([insertRow])
       .select()
       .maybeSingle()
+
 
     if (insertError && verificationMethod && insertError.message?.includes("verification_method")) {
       console.warn("Retrying response insert without verification_method column...")
@@ -422,7 +451,152 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ success: true, responseId: response?.id })
+    // 19. Auto PDF Certificate generation
+    let certificateUrl: string | null = null
+    if (form.settings?.certificateEnabled && response?.id) {
+      try {
+        const doc = generateCertificatePdf({
+          formTitle: form.title || "Form",
+          respondentName: verifiedRespondentEmail || answers["name"] || answers["full_name"] || undefined,
+          respondentEmail: verifiedRespondentEmail || undefined,
+          submissionDate: new Date(),
+          responseId: response.id,
+          templateText: form.settings?.certificateTemplate || undefined,
+        })
+        const pdfArrayBuffer = doc.output("arraybuffer")
+        const pdfBuffer = Buffer.from(pdfArrayBuffer)
+        const storagePath = `${form.id}/${response.id}.pdf`
+
+        const { error: certUploadErr } = await adminSupabase.storage
+          .from("certificates")
+          .upload(storagePath, pdfBuffer, {
+            contentType: "application/pdf",
+            upsert: true,
+          })
+
+        if (!certUploadErr) {
+          const { data: publicUrlData } = adminSupabase.storage
+            .from("certificates")
+            .getPublicUrl(storagePath)
+          certificateUrl = publicUrlData?.publicUrl || null
+          if (certificateUrl) {
+            metadata.certificateUrl = certificateUrl
+            await adminSupabase
+              .from("responses")
+              .update({ metadata })
+              .eq("id", response.id)
+          }
+        }
+      } catch (certErr) {
+        console.error("Failed to generate/upload certificate PDF:", certErr)
+      }
+    }
+
+    // 13. Generic Webhook POST
+    if (form.settings?.webhookUrl) {
+      try {
+        fetch(form.settings.webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(form.settings.webhookSecret ? { "X-Blazion-Webhook-Secret": form.settings.webhookSecret } : {}),
+          },
+          body: JSON.stringify({
+            event: "form_response.submitted",
+            form_id: form.id,
+            form_title: form.title,
+            response_id: response?.id,
+            submitted_at: new Date().toISOString(),
+            answers,
+            metadata,
+          }),
+        }).catch((wErr) => console.warn("Webhook dispatch error:", wErr))
+      } catch (wErr) {
+        console.warn("Webhook trigger error:", wErr)
+      }
+    }
+
+    // 18. Slot booking lock
+    try {
+      const bookedSlots = form.settings?.bookedSlots || []
+      let slotModified = false
+      for (const [qId, val] of Object.entries(answers)) {
+        if (val && typeof val === "object" && (val as any).slot && (val as any).date) {
+          bookedSlots.push({
+            questionId: qId,
+            date: (val as any).date,
+            slot: (val as any).slot,
+            responseId: response?.id,
+            bookedAt: Date.now(),
+          })
+          slotModified = true
+        }
+      }
+      if (slotModified) {
+        const updatedSettings = { ...form.settings, bookedSlots }
+        await adminSupabase.from("forms").update({ settings: updatedSettings }).eq("id", form.id)
+      }
+    } catch (slotErr) {
+      console.error("Error locking booked slot:", slotErr)
+    }
+
+    // 20. Approval Workflow Initiation
+    if (form.settings?.approvalWorkflow?.enabled && response?.id) {
+      try {
+        const stages = form.settings.approvalWorkflow.stages || []
+        const stage1 = stages[0]
+        if (stage1 && stage1.approverEmail) {
+          const origin = new URL(req.url).origin
+          const approveToken = createApprovalToken({
+            responseId: response.id,
+            formId: form.id,
+            stage: 1,
+            approverEmail: stage1.approverEmail,
+            action: "approve",
+          })
+          const rejectToken = createApprovalToken({
+            responseId: response.id,
+            formId: form.id,
+            stage: 1,
+            approverEmail: stage1.approverEmail,
+            action: "reject",
+          })
+
+          metadata.approvals = {
+            status: "pending",
+            currentStage: 1,
+            history: [],
+          }
+          await adminSupabase.from("responses").update({ metadata }).eq("id", response.id)
+
+          await resend.emails.send({
+            from: "Blazion Approvals <onboarding@resend.dev>",
+            to: [stage1.approverEmail],
+            subject: `Action Required: Stage 1 Approval for "${form.title}"`,
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <h2 style="color: #0f172a;">New Submission Awaiting Your Approval</h2>
+                <p>A new response has been submitted for <strong>${form.title}</strong>.</p>
+                <div style="margin: 24px 0;">
+                  <a href="${origin}/api/approvals/${approveToken}?action=approve" style="background-color: #10b981; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-right: 12px; display: inline-block;">Approve</a>
+                  <a href="${origin}/api/approvals/${rejectToken}?action=reject" style="background-color: #ef4444; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reject</a>
+                </div>
+              </div>
+            `,
+          })
+        }
+      } catch (apprErr) {
+        console.error("Error triggering approval workflow:", apprErr)
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      responseId: response?.id,
+      personaReport,
+      certificateUrl,
+    })
+
 
   } catch (error: any) {
     console.error("Server error submitting form:", error)

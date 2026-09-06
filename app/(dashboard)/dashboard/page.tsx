@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { FormCard } from "@/components/dashboard/FormCard"
 import { CreateFormButton } from "@/components/dashboard/CreateFormButton"
 import { GenerateWithAIButton } from "@/components/dashboard/GenerateWithAIButton"
+import { TemplatesModalButton } from "@/components/dashboard/TemplatesModalButton"
 
 export const revalidate = 0
 
@@ -58,6 +59,7 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <TemplatesModalButton />
           <GenerateWithAIButton />
           <CreateFormButton />
         </div>
@@ -66,9 +68,10 @@ export default async function DashboardPage() {
       {!forms || forms.length === 0 ? (
         <div className="rounded-lg border-2 border-dashed border-border p-12 text-center bg-card">
           <p className="text-sm text-muted-foreground mb-4">
-            No forms yet. Create your first form or generate one with AI.
+            No forms yet. Create your first form, generate one with AI, or pick from our ready-made templates.
           </p>
           <div className="flex items-center justify-center gap-3">
+            <TemplatesModalButton />
             <GenerateWithAIButton />
             <CreateFormButton />
           </div>

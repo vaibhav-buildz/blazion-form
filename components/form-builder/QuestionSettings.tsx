@@ -397,7 +397,74 @@ export function QuestionSettings({
             )}
           </div>
         )}
+
+        {/* Slot Booking Settings */}
+        {question.type === "slot_booking" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Slot Duration (Minutes)</Label>
+              <select
+                disabled={disabled}
+                value={question.settings?.slotDuration || 30}
+                onChange={(e) => handleSettingUpdate("slotDuration", parseInt(e.target.value, 10))}
+                className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+              >
+                <option value={15}>15 Minutes</option>
+                <option value={30}>30 Minutes</option>
+                <option value={45}>45 Minutes</option>
+                <option value={60}>60 Minutes (1 Hour)</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Start Hour (24h)</Label>
+                <Input
+                  disabled={disabled}
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={question.settings?.startHour ?? 9}
+                  onChange={(e) => handleSettingUpdate("startHour", parseInt(e.target.value, 10))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>End Hour (24h)</Label>
+                <Input
+                  disabled={disabled}
+                  type="number"
+                  min={1}
+                  max={24}
+                  value={question.settings?.endHour ?? 17}
+                  onChange={(e) => handleSettingUpdate("endHour", parseInt(e.target.value, 10))}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Indian Phone Settings */}
+        {question.type === "phone" && (
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                disabled={disabled}
+                id="strict-indian-phone"
+                checked={question.settings?.strictIndianPhone ?? true}
+                onCheckedChange={(checked) => handleSettingUpdate("strictIndianPhone", !!checked)}
+              />
+              <Label htmlFor="strict-indian-phone">Require 10-digit Indian Mobile Number (starts with 6, 7, 8, 9)</Label>
+            </div>
+          </div>
+        )}
+
+        {/* Signature Settings */}
+        {question.type === "signature" && (
+          <div className="space-y-2 text-xs text-muted-foreground">
+            <p>Respondent will draw or sign directly using finger, stylus, or mouse. E-signatures are securely preserved as high-resolution PNG images.</p>
+          </div>
+        )}
       </div>
+
 
       {/* Conditional Logic Section */}
       <div className="border-t border-border pt-6 space-y-4">
