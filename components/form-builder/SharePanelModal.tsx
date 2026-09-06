@@ -1,8 +1,9 @@
 "use client"
 
 import React, { useState, useRef } from "react"
-import { Copy, Check, QrCode, Code2, Download, Share2, ExternalLink } from "lucide-react"
+import { Copy, Check, QrCode, Code2, Download, Share2, ExternalLink, FileSpreadsheet } from "lucide-react"
 import { QRCodeCanvas } from "qrcode.react"
+import Papa from "papaparse"
 import {
   Dialog,
   DialogContent,
@@ -10,12 +11,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+interface ContactRow {
+  name?: string
+  phone?: string
+  email?: string
+  [key: string]: any
+}
+
 interface SharePanelModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   formTitle: string
   formSlug: string
-  formId: string
+  formId?: string
 }
 
 export function SharePanelModal({
@@ -23,10 +31,56 @@ export function SharePanelModal({
   onOpenChange,
   formTitle,
   formSlug,
+  formId,
 }: SharePanelModalProps) {
   const [copiedLink, setCopiedLink] = useState(false)
   const [copiedEmbed, setCopiedEmbed] = useState(false)
+  const [contacts, setContacts] = useState<ContactRow[]>([])
+  const [csvError, setCsvError] = useState<string | null>(null)
   const qrRef = useRef<HTMLDivElement | null>(null)
+
+  const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCsvError(null)
+
+    Papa.parse<any>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        if (results.errors && results.errors.length > 0) {
+          setCsvError("Error parsing CSV: " + results.errors[0].message)
+          return
+        }
+        const parsed: ContactRow[] = (results.data || []).map((row: any) => {
+          const keys = Object.keys(row)
+          const nameKey = keys.find((k) => /name|full_name|fullname/i.test(k))
+          const phoneKey = keys.find((k) => /phone|mobile|contact|tel/i.test(k))
+          const emailKey = keys.find((k) => /email|mail/i.test(k))
+
+          return {
+            name: nameKey ? row[nameKey] : row.name || "",
+            phone: phoneKey ? row[phoneKey] : row.phone || "",
+            email: emailKey ? row[emailKey] : row.email || "",
+          }
+        })
+
+        if (parsed.length === 0) {
+          setCsvError("No valid contact rows found in the CSV file.")
+          return
+        }
+
+        setContacts(parsed)
+        try {
+          const storageKey = formId ? `blazion_contacts_${formId}` : "blazion_contacts_latest"
+          localStorage.setItem(storageKey, JSON.stringify(parsed))
+        } catch {}
+      },
+      error: (err) => {
+        setCsvError("Failed to read CSV: " + err.message)
+      },
+    })
+  }
 
   const origin = typeof window !== "undefined" ? window.location.origin : ""
   const publicUrl = `${origin}/f/${formSlug}`
