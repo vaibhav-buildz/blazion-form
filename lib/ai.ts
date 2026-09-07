@@ -105,10 +105,7 @@ Return ONLY valid JSON matching this schema.`
   const responseText = res.text || ""
 
   if (!responseText) {
-    if (isQuotaError(lastError)) {
-      throw new Error("AI_QUOTA_EXCEEDED")
-    }
-    throw lastError || new Error("Failed to generate form content with Gemini AI.")
+    throw new Error("Failed to generate form content with Gemini AI.")
   }
 
   let cleanJson = responseText.trim()

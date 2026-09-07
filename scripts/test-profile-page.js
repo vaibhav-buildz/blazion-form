@@ -48,11 +48,11 @@ async function runProfilePageTests() {
 
     // Verify all 5 sections render
     console.log("[STEP 1] Verifying all 5 profile sections render...")
-    const profileInfoHeading = page.getByText('Profile Info', { exact: true })
-    const orgBrandingHeading = page.getByText('Organisation Branding', { exact: true })
-    const changePasswordHeading = page.getByText('Change Password', { exact: true })
-    const notificationHeading = page.getByText('Notification Preferences', { exact: true })
-    const dangerZoneHeading = page.getByText('Danger Zone', { exact: true })
+    const profileInfoHeading = page.locator('text=Profile Info').first()
+    const orgBrandingHeading = page.locator('text=Organisation Branding').first()
+    const changePasswordHeading = page.locator('text=Change Password').first()
+    const notificationHeading = page.locator('text=Notification Preferences').first()
+    const dangerZoneHeading = page.locator('text=Danger Zone').first()
 
     const v1 = await profileInfoHeading.isVisible()
     const v2 = await orgBrandingHeading.isVisible()

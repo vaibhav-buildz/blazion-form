@@ -145,8 +145,9 @@ async function runFeatureTests() {
           })
         })
         const auditJson = await auditRes.json()
-        console.log("[TEST 8 Result]:", { status: auditRes.status, hasFeedback: Boolean(auditJson.overallHealth || auditJson.feedback) })
-        results.push({ name: "AI Form Auditor API", passed: auditRes.status === 200 && Boolean(auditJson.overallHealth || auditJson.feedback) })
+        const hasAuditContent = Boolean(auditJson.summary || auditJson.suggestions || auditJson.overallScore)
+        console.log("[TEST 8 Result]:", { status: auditRes.status, hasAuditContent, score: auditJson.overallScore })
+        results.push({ name: "AI Form Auditor API", passed: auditRes.status === 200 && hasAuditContent })
 
         // 9. Test AI Field Suggestions API
         console.log("\n[TEST 9] Testing AI Smart Field Suggestions API (POST /api/ai/suggest-fields)...")
