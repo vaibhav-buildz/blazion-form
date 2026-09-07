@@ -80,14 +80,14 @@ async function runAllTests() {
     console.log("[SETUP] Successfully logged in to Dashboard")
 
     // Check if we have an existing form or create one
-    const formCard = page.locator('.group.relative.flex.flex-col').first()
-    if ((await formCard.count()) === 0) {
+    const editLink = page.locator('a[href*="/edit"]').first()
+    if ((await editLink.count()) === 0) {
       console.log("[SETUP] Creating a new form...")
       await page.click('button:has-text("Create Form")')
       await page.waitForURL("**/edit", { timeout: 10000 })
     } else {
       console.log("[SETUP] Opening existing form for editing...")
-      await formCard.click()
+      await editLink.click()
       await page.waitForURL("**/edit", { timeout: 10000 })
     }
 
@@ -234,6 +234,9 @@ async function runAllTests() {
     let test2Passed = false
     let test2Details = ""
 
+    // Clear prior responses so quota starts from 0
+    await supabaseAdmin.from("responses").delete().eq("form_id", formId)
+
     // Turn off password & expiry for clean limit test, keep limit=2, mode=none
     await page.click('button:has-text("Settings")')
     await page.waitForSelector('div[role="dialog"]')
@@ -251,13 +254,23 @@ async function runAllTests() {
 
     // Publish form
     console.log("[TEST 2] Publishing form...")
-    const publishBtn = page.locator('button:has-text("Publish")')
+    const oldSlugInput = (await page.locator('input[readonly]').count()) > 0 ? await page.locator('input[readonly]').inputValue() : ""
+    const publishBtn = page.locator('button:text-is("Publish")')
     if (await publishBtn.isVisible()) {
       await publishBtn.click()
-      await page.waitForTimeout(2000)
+      await page.waitForSelector('button:has-text("Unpublish to Edit")', { timeout: 10000 })
+      if (oldSlugInput) {
+        await page.waitForFunction(
+          (prev) => {
+            const el = document.querySelector('input[readonly]')
+            return el && el.value && el.value !== prev
+          },
+          oldSlugInput,
+          { timeout: 10000 }
+        ).catch(() => {})
+      }
     }
-
-    // Get public URL
+    await page.waitForSelector('input[readonly]', { timeout: 10000 })
     const publicUrl = await page.locator('input[readonly]').inputValue()
     console.log(`[TEST 2] Form Public URL: ${publicUrl}`)
 

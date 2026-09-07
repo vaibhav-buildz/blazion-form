@@ -87,6 +87,107 @@ All automated and manual tests are currently **passing (100% green)**. All disco
 
 ---
 
+### Bug 8: Missing Password Gate UI in Public Form
+- **Severity:** Major (Functional Incompleteness)
+- **Component:** `components/form-builder/PublicFormFill.tsx`
+- **Root Cause:** While `/api/forms/[id]/verify-password` was implemented with bcrypt verification and state variables (`isPasswordVerified`, `passwordInput`) were defined, the password entry card and unlock flow were never rendered, allowing password-protected forms to either show questions directly or misalign with gates.
+- **Resolution:** Rendered the dedicated password unlock card with error messaging and `Loader2` spinner. Wrapped downstream email/OTP gates and question forms inside `isPasswordVerified`.
+- **Status:** **FIXED & VERIFIED** (Playwright E2E Test 1 & helper tests verify password unlock).
+
+---
+
+### Bug 9: Smart Field Suggestions API 404
+- **Severity:** Major (Endpoint Discrepancy)
+- **Component:** `components/form-builder/FormBuilder.tsx` (Line 626)
+- **Root Cause:** When a user clicked a suggested field chip from Gemini, `FormBuilder.tsx` attempted to POST to `/api/forms/${form.id}/questions`, which returned a 404 because the correct questions route is `/api/questions/create`.
+- **Resolution:** Updated the POST target to `/api/questions/create` with `form_id`, `type`, `title`, `position`, and options.
+- **Status:** **FIXED & VERIFIED** (Smart field suggestions now successfully persist to database).
+
+---
+
+### Bug 10: Forgot Password Email Redirect to Non-Existent Route
+- **Severity:** Major (Auth Recovery Broken)
+- **Component:** `app/(auth)/forgot-password/page.tsx`
+- **Root Cause:** `resetPasswordForEmail` specified `redirectTo: ${origin}/auth/reset-password`, but the reset password page is located at `/reset-password` and requires passing through the auth callback session handler (`/auth/callback?next=/reset-password`).
+- **Resolution:** Corrected `redirectTo` to `${origin}/auth/callback?next=/reset-password` so password reset magic links properly establish the recovery session.
+- **Status:** **FIXED & VERIFIED**.
+
+---
+
+### Bug 11: Section Break Allowed as Conditional Logic Rule Target
+- **Severity:** Medium (Builder Logic Inconsistency)
+- **Component:** `components/form-builder/QuestionSettings.tsx`
+- **Root Cause:** `priorQuestions` in `QuestionSettings.tsx` did not filter out section breaks, allowing users to configure conditions dependent on a section break (which has no respondent answer).
+- **Resolution:** Added `q.type !== "section_break"` filter to `priorQuestions` dropdown options.
+- **Status:** **FIXED & VERIFIED**.
+
+---
+
+### Bug 12: Native `alert(...)` and `confirm(...)` across Builder & Dashboard
+- **Severity:** Minor / UX Polish
+- **Component:** `FormCard.tsx`, `CreateFormButton.tsx`, `TemplatesModalButton.tsx`, `FormSettingsDialog.tsx`, `ResponsesView.tsx`, `VersionHistoryModal.tsx`
+- **Root Cause:** Browser-native blocking popups (`alert()` and `confirm()`) broke the premium UX and disrupted automated testing.
+- **Resolution:** Replaced all native dialogs with inline status banners, toasts, and accessible confirm triggers.
+- **Status:** **FIXED & VERIFIED**.
+
+---
+
+### Bug 13: Hardcoded US Date Formats (`en-US`) in Submission Route & FormCard
+- **Severity:** Minor / Localization
+- **Component:** `components/dashboard/FormCard.tsx` & `app/api/forms/[id]/submit/route.ts`
+- **Root Cause:** Dates were formatted using `new Date().toLocaleDateString("en-US")` instead of the mandated Indian standard (`DD-MM-YYYY`).
+- **Resolution:** Converted all date displays to use `formatDateDDMMYYYY` and `formatDateTimeDDMMYYYY`.
+- **Status:** **FIXED & VERIFIED**.
+
+---
+
+### Bug 14: Mobile Sidebar & 3-Column FormBuilder Clipping
+- **Severity:** Major (Responsive Layout Defect)
+- **Component:** `app/(dashboard)/layout.tsx` & `components/form-builder/FormBuilder.tsx`
+- **Root Cause:** On 375px and 768px viewports, the fixed 240px dashboard sidebar crushed dashboard content into 119px width. Similarly, the 3-column form builder layout crushed the central canvas when sidebar columns remained fixed width.
+- **Resolution:**
+  - Added a mobile overlay drawer with hamburger toggle in `app/(dashboard)/layout.tsx`.
+  - Added a segmented view switcher (`[Fields | Canvas | Inspector]`) in `FormBuilder.tsx` on screens `< lg`, allowing seamless single-column mobile operation without horizontal scrolling or clipping.
+- **Status:** **FIXED & VERIFIED** (Tested across 375px, 768px, and 1440px).
+
+---
+
+### Bug 15: Color System Non-Compliance in Builder Modals & Portal
+- **Severity:** Minor / Theme Studio Polish
+- **Component:** `ThemeStudioModal.tsx`, `SharePanelModal.tsx`, `VersionHistoryModal.tsx`, `TeamWorkspaceModal.tsx`, `app/portal/page.tsx`
+- **Root Cause:** Components contained leftover hardcoded Tailwind classes (`slate-*`, `purple-*`, `pink-*`, `indigo-*`) rather than Saffron & Sandstone design system tokens.
+- **Resolution:** Migrated all modal backgrounds, borders, badges, buttons, and icons to semantic tokens (`bg-primary`, `text-primary`, `border-border`, `bg-card`, `bg-muted`).
+- **Status:** **FIXED & VERIFIED**.
+
+---
+
+### Bug 16: Public Form Dynamic Route Caching of Response Limit / Expiry
+- **Severity:** Major (Edge Case Stale State)
+- **Component:** `app/f/[slug]/page.tsx`
+- **Root Cause:** Next.js App Router cached the rendered output of `/f/[slug]` when `export const dynamic = "force-dynamic"` was missing, causing subsequent responses to receive stale "Form Closed" HTML.
+- **Resolution:** Added `export const dynamic = "force-dynamic"` to `app/f/[slug]/page.tsx`.
+- **Status:** **FIXED & VERIFIED** (Playwright Test 2 submits responses in real-time).
+
+---
+
+### Bug 17: SSR Hydration Mismatch on Offline Indicator
+- **Severity:** Minor / Console Warning
+- **Component:** `components/form-builder/PublicFormFill.tsx` (Line 519)
+- **Root Cause:** `isOnline` initialized directly from `navigator.onLine` during SSR/hydration, causing React hydration mismatch warning when browser status differed from SSR default.
+- **Resolution:** Initialized `isOnline` to `true` and synchronized via `useEffect` on client mount.
+- **Status:** **FIXED & VERIFIED** (Console errors: 0).
+
+---
+
+### Bug 18: Card Title Non-Clickable in Dashboard
+- **Severity:** Minor / UX Polish
+- **Component:** `components/dashboard/FormCard.tsx`
+- **Root Cause:** The form card title was rendered as plain text inside `CardTitle`, requiring users to find the small "Edit" button in the footer.
+- **Resolution:** Wrapped `formTitle` in an accessible Next.js `Link` to `/dashboard/forms/${form.id}/edit`.
+- **Status:** **FIXED & VERIFIED**.
+
+---
+
 ## 3. Test Suite Run Log & Status Matrix
 
 | Test ID | Suite Name | Description | Status |

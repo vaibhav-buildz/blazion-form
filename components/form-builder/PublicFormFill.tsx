@@ -516,14 +516,15 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
     Boolean(form.settings?.conversational_mode)
   )
   const [conversationalIndex, setConversationalIndex] = React.useState(0)
-  const [isOnline, setIsOnline] = React.useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  )
+  const [isOnline, setIsOnline] = React.useState(true)
 
   const { language, setLanguage } = useLanguage()
 
   // Offline queue auto-sync listener
   React.useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      setIsOnline(navigator.onLine)
+    }
     const handleOnline = async () => {
       setIsOnline(true)
       try {
@@ -577,7 +578,6 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
   const [passwordInput, setPasswordInput] = React.useState("")
   const [passwordError, setPasswordError] = React.useState<string | null>(null)
   const [isVerifyingPassword, setIsVerifyingPassword] = React.useState(false)
-
 
   // Check Supabase session client-side on mount for mode 'login' (and pre-fill fallback)
   React.useEffect(() => {
@@ -1210,26 +1210,63 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
           )}
         </Card>
 
-        {/* Loading Spinner for Auth Check */}
-        {verificationMode === "login" && isCheckingAuth && (
-          <div className="flex items-center justify-center p-8 space-x-2 text-muted-foreground text-sm">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span>Checking account status...</span>
-          </div>
-        )}
-
-        {/* MODE 'login' Gate: Unauthenticated User */}
-        {verificationMode === "login" && !isCheckingAuth && !userEmail && (
+        {/* PASSWORD PROTECTION GATE */}
+        {!isPasswordVerified && (
           <Card className="p-8 border-border shadow-sm text-center space-y-4">
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Lock className="h-6 w-6" />
             </div>
             <div className="space-y-1.5">
-              <h3 className="text-xl font-bold text-foreground">Please log in to respond to this form</h3>
+              <h3 className="text-xl font-bold text-foreground">Password Protected Form</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                This form requires respondents to be logged into a Blazion Form account to verify their identity.
+                This form requires a password to view and submit responses.
               </p>
             </div>
+            <form onSubmit={handleVerifyPassword} className="max-w-xs mx-auto space-y-3">
+              <Input
+                type="password"
+                placeholder="Enter password"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value)
+                  setPasswordError(null)
+                }}
+                required
+                className="text-center"
+              />
+              {passwordError && (
+                <p className="text-xs font-medium text-destructive">{passwordError}</p>
+              )}
+              <Button type="submit" disabled={isVerifyingPassword} className="w-full font-semibold">
+                {isVerifyingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Unlock Form
+              </Button>
+            </form>
+          </Card>
+        )}
+
+        {isPasswordVerified && (
+          <>
+            {/* Loading Spinner for Auth Check */}
+            {verificationMode === "login" && isCheckingAuth && (
+              <div className="flex items-center justify-center p-8 space-x-2 text-muted-foreground text-sm">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span>Checking account status...</span>
+              </div>
+            )}
+
+            {/* MODE 'login' Gate: Unauthenticated User */}
+            {verificationMode === "login" && !isCheckingAuth && !userEmail && (
+              <Card className="p-8 border-border shadow-sm text-center space-y-4">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Lock className="h-6 w-6" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-xl font-bold text-foreground">Please log in to respond to this form</h3>
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                    This form requires respondents to be logged into a Blazion Form account to verify their identity.
+                  </p>
+                </div>
             <div className="pt-2">
               <Button asChild className="px-6 font-semibold">
                 <Link
@@ -1785,6 +1822,8 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
         </form>
       </>
     )}
+    </>
+  )}
   </div>
 </div>
   )

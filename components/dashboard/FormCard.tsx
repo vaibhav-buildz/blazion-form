@@ -120,7 +120,9 @@ export function FormCard({ form }: FormCardProps) {
         )}
         <CardHeader className="space-y-3">
           <CardTitle className="text-xl font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-            {formTitle}
+            <Link href={`/dashboard/forms/${form.id}/edit`} className="hover:underline">
+              {formTitle}
+            </Link>
           </CardTitle>
 
           <div className="flex items-center gap-2 flex-wrap text-xs">

@@ -9,7 +9,7 @@
     "test": 2,
     "name": "EDIT DISPLAY NAME PERSISTENCE",
     "result": "PASS",
-    "details": "Display name updated to 'E2E Tester 6827' and persisted across page reload."
+    "details": "Display name updated to 'E2E Tester 9923' and persisted across page reload."
   },
   {
     "test": 3,

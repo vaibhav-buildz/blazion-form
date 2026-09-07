@@ -49,6 +49,7 @@ async function runProfilePageTests() {
     // Verify all 5 sections render
     console.log("[STEP 1] Verifying all 5 profile sections render...")
     const profileInfoHeading = page.locator('text=Profile Info').first()
+    await profileInfoHeading.waitFor({ state: "visible", timeout: 10000 })
     const orgBrandingHeading = page.locator('text=Organisation Branding').first()
     const changePasswordHeading = page.locator('text=Change Password').first()
     const notificationHeading = page.locator('text=Notification Preferences').first()
