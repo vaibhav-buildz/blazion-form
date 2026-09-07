@@ -91,11 +91,13 @@ function getTypeLabel(type: string): string {
 
 function FileDownloadLink({ path }: { path: string }) {
   const [loading, setLoading] = React.useState(false)
+  const [downloadErr, setDownloadErr] = React.useState<string | null>(null)
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.preventDefault()
     if (!path || loading) return
     setLoading(true)
+    setDownloadErr(null)
     try {
       const res = await fetch(`/api/files/signed-url`, {
         method: "POST",
@@ -106,11 +108,11 @@ function FileDownloadLink({ path }: { path: string }) {
       if (res.ok && data.signedUrl) {
         window.open(data.signedUrl, "_blank", "noopener,noreferrer")
       } else {
-        alert(data.error || "Failed to generate download link")
+        setDownloadErr(data.error || "Failed to download")
       }
     } catch (err: any) {
       console.error("Error fetching signed URL:", err)
-      alert("Error generating download link")
+      setDownloadErr("Failed to download")
     } finally {
       setLoading(false)
     }
@@ -119,18 +121,23 @@ function FileDownloadLink({ path }: { path: string }) {
   const fileName = path.split("/").pop()?.replace(/^\d+-/, "") || "File"
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleDownload}
-      disabled={loading}
-      className="h-8 px-2.5 gap-1.5 text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 border-primary/20 shrink-0"
-      title={fileName}
-    >
-      <FileText className="h-3.5 w-3.5" />
-      <span className="max-w-[120px] truncate">{loading ? "Loading..." : fileName}</span>
-      <Download className="h-3 w-3 ml-0.5 opacity-70" />
-    </Button>
+    <div className="inline-flex flex-col gap-1 items-start">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleDownload}
+        disabled={loading}
+        className="h-8 px-2.5 gap-1.5 text-xs font-medium text-primary hover:text-primary hover:bg-primary/10 border-primary/20 shrink-0"
+        title={fileName}
+      >
+        <FileText className="h-3.5 w-3.5" />
+        <span className="max-w-[120px] truncate">{loading ? "Loading..." : fileName}</span>
+        <Download className="h-3 w-3 ml-0.5 opacity-70" />
+      </Button>
+      {downloadErr && (
+        <span className="text-[10px] text-destructive font-medium">{downloadErr}</span>
+      )}
+    </div>
   )
 }
 
