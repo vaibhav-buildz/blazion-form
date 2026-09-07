@@ -257,13 +257,13 @@ export function TeamWorkspaceModal() {
             {/* Members List */}
             <div className="border border-border rounded-xl overflow-hidden divide-y divide-border text-xs">
               {members.map((m) => {
-                let roleColor = "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20"
+                let roleColor = "bg-primary/10 text-primary border-primary/20"
                 let RoleIcon = ShieldCheck
                 if (m.role === "Editor") {
-                  roleColor = "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20"
+                  roleColor = "bg-secondary text-secondary-foreground border-border"
                   RoleIcon = Shield
                 } else if (m.role === "Viewer") {
-                  roleColor = "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20"
+                  roleColor = "bg-muted text-muted-foreground border-border"
                   RoleIcon = Eye
                 }
 
