@@ -117,7 +117,7 @@ export function SharePanelModal({
       <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
               <Share2 className="w-5 h-5" />
             </div>
             <DialogTitle className="text-xl font-bold">Share Form</DialogTitle>
@@ -127,7 +127,7 @@ export function SharePanelModal({
         <div className="space-y-6 pt-3">
           {/* 1. Direct Public Link */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Direct Public Link
             </label>
             <div className="flex items-center gap-2">
@@ -135,21 +135,21 @@ export function SharePanelModal({
                 type="text"
                 readOnly
                 value={publicUrl}
-                className="flex-1 px-3 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 select-all focus:outline-hidden"
+                className="flex-1 px-3 py-2 text-sm rounded-xl border border-border bg-card text-foreground select-all focus:outline-hidden"
               />
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 text-xs font-semibold hover:opacity-90 transition"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition shadow-xs"
               >
-                {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                {copiedLink ? <Check className="w-4 h-4 text-primary-foreground" /> : <Copy className="w-4 h-4" />}
                 <span>{copiedLink ? "Copied!" : "Copy"}</span>
               </button>
               <a
                 href={publicUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="p-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="p-2 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                 title="Open in new tab"
               >
                 <ExternalLink className="w-4 h-4" />
@@ -158,31 +158,31 @@ export function SharePanelModal({
           </div>
 
           {/* 2. QR Code (qrcode.react) */}
-          <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
+          <div className="p-4 rounded-xl border border-border bg-card space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <QrCode className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                <QrCode className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-bold uppercase tracking-wider text-foreground">
                   Scan QR Code
                 </span>
               </div>
               <button
                 type="button"
                 onClick={handleDownloadQR}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border border-border text-foreground hover:bg-muted transition"
               >
                 <Download className="w-3.5 h-3.5" /> Download PNG
               </button>
             </div>
 
-            <div ref={qrRef} className="flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950 rounded-xl">
+            <div ref={qrRef} className="flex flex-col items-center justify-center p-4 bg-muted/30 rounded-xl">
               <QRCodeCanvas
                 value={publicUrl}
                 size={180}
                 level="H"
                 includeMargin={true}
               />
-              <p className="text-[11px] text-slate-400 mt-2">
+              <p className="text-[11px] text-muted-foreground mt-2">
                 Scan with any smartphone camera to open form
               </p>
             </div>
@@ -191,15 +191,15 @@ export function SharePanelModal({
           {/* 3. iFrame Embed Generator */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <Code2 className="w-4 h-4 text-slate-600 dark:text-slate-400" /> Embed iFrame in Website
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <Code2 className="w-4 h-4 text-muted-foreground" /> Embed iFrame in Website
               </label>
               <button
                 type="button"
                 onClick={handleCopyEmbed}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
               >
-                {copiedEmbed ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedEmbed ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedEmbed ? "Copied Embed Snippet!" : "Copy Code"}</span>
               </button>
             </div>
@@ -209,10 +209,10 @@ export function SharePanelModal({
                 readOnly
                 rows={3}
                 value={embedCode}
-                className="w-full p-3 font-mono text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 focus:outline-hidden"
+                className="w-full p-3 font-mono text-xs rounded-xl border border-border bg-card text-foreground focus:outline-hidden"
               />
             </div>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-muted-foreground">
               Paste this HTML snippet into WordPress, Webflow, Shopify, or any HTML page.
             </p>
           </div>
@@ -220,8 +220,8 @@ export function SharePanelModal({
           {/* 4. CSV Bulk Contact Upload (Item 14) */}
           <div className="space-y-3 pt-2 border-t border-border">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                <FileSpreadsheet className="w-4 h-4 text-primary" />
                 Bulk Contact Broadcast (CSV)
               </label>
               <span className="text-[11px] text-muted-foreground">
@@ -238,7 +238,7 @@ export function SharePanelModal({
                 type="file"
                 accept=".csv,text/csv"
                 onChange={handleCsvUpload}
-                className="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-500/10 file:text-emerald-700 hover:file:bg-emerald-500/20 cursor-pointer"
+                className="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
               />
               {csvError && <p className="text-xs text-destructive font-medium">{csvError}</p>}
             </div>
@@ -286,7 +286,7 @@ export function SharePanelModal({
                     title="External SMS/WhatsApp integration is pending future MSG91 API key setup"
                   >
                     <span>Send Broadcast</span>
-                    <span className="bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] px-2 py-0.5 rounded-full font-semibold">
+                    <span className="bg-secondary text-secondary-foreground border border-border text-[10px] px-2 py-0.5 rounded-full font-semibold">
                       Coming soon (MSG91)
                     </span>
                   </button>
