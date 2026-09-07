@@ -341,14 +341,14 @@ export function ThemeStudioModal({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleApply}
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90 transition"
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition"
               >
                 Save Theme
               </button>

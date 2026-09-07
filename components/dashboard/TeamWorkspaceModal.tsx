@@ -170,7 +170,7 @@ export function TeamWorkspaceModal() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="gap-2 text-sm">
-          <Users className="w-4 h-4 text-purple-600" />
+          <Users className="w-4 h-4 text-primary" />
           <span>Team Workspace</span>
         </Button>
       </DialogTrigger>
@@ -178,7 +178,7 @@ export function TeamWorkspaceModal() {
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Building2 className="w-5 h-5" />
             </div>
             <div>
