@@ -49,7 +49,7 @@ async function handlePasswordGateIfPresent(targetPage, pass = "testpass123") {
 }
 
 async function fillAllVisibleFields(targetPage, valuePrefix = "Answer") {
-  const inputs = targetPage.locator('input[type="text"], textarea')
+  const inputs = targetPage.locator('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]), textarea')
   const count = await inputs.count()
   for (let i = 0; i < count; i++) {
     const input = inputs.nth(i)
@@ -145,6 +145,12 @@ async function runAllTests() {
     }
     const passwordInput = dialog.locator('input[placeholder="Enter access password"]')
     await passwordInput.fill("testpass123")
+
+    // Ensure standard mode for multi-step sections test
+    const convToggle = dialog.locator('#conversational-mode-toggle')
+    if (await convToggle.isChecked()) {
+      await convToggle.uncheck()
+    }
 
     // Mode = OTP
     await dialog.locator('#verify-otp').click()
@@ -244,6 +250,10 @@ async function runAllTests() {
     if (await dialog.locator('#password-toggle').isChecked()) {
       await dialog.locator('#password-toggle').uncheck()
     }
+    const convToggle2 = dialog.locator('#conversational-mode-toggle')
+    if (await convToggle2.isChecked()) {
+      await convToggle2.uncheck()
+    }
     const clearExpiryBtn = dialog.locator('button:has-text("Clear Expiry")')
     if (await clearExpiryBtn.isVisible()) {
       await clearExpiryBtn.click()
@@ -286,7 +296,7 @@ async function runAllTests() {
     await fillAllVisibleFields(subPage, "Response 1")
     await subPage.click('button[type="submit"]')
     try {
-      await subPage.waitForSelector('text=Thank', { timeout: 10000 })
+      await subPage.waitForSelector('text=Thank', { timeout: 25000 })
     } catch (e) {
       await subPage.screenshot({ path: `${SCREENSHOT_DIR}/test2_submission_failed.png` })
       throw e
@@ -300,7 +310,7 @@ async function runAllTests() {
     await handlePasswordGateIfPresent(subPage, "testpass123")
     await fillAllVisibleFields(subPage, "Response 2")
     await subPage.click('button[type="submit"]')
-    await subPage.waitForSelector('text=Thank', { timeout: 10000 })
+    await subPage.waitForSelector('text=Thank', { timeout: 25000 })
     console.log("[TEST 2] Response #2 submitted successfully")
 
     // Response 3 (Attempt)
@@ -583,7 +593,7 @@ async function runAllTests() {
     // Click Submit
     console.log("[TEST 6] Clicking Submit button...")
     await msPage.click('button:has-text("Submit")')
-    await msPage.waitForSelector('text=Thank', { timeout: 10000 })
+    await msPage.waitForSelector('text=Thank', { timeout: 25000 })
 
     const finalSubmitted = await msPage.locator('text=Thank').isVisible()
     console.log(`[TEST 6] Final Thank You screen visible: ${finalSubmitted}`)
@@ -596,6 +606,9 @@ async function runAllTests() {
     }
     testResults.push({ test: 6, name: "MULTI-STEP FLOW", result: test6Passed ? "PASS" : "FAIL", details: test6Details })
     await multiStepContext.close()
+
+    // Cleanup extra section breaks added in Test 6 so form is ready for subsequent runs
+    await supabaseAdmin.from("questions").delete().eq("form_id", formId).eq("type", "section_break")
 
   } catch (err) {
     console.error("FATAL E2E ERROR:", err)

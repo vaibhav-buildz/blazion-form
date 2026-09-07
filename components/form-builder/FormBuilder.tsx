@@ -511,13 +511,21 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
             form={form}
             open={isSettingsOpen}
             onOpenChange={setIsSettingsOpen}
-            onSettingsSaved={(newSettings) => {
-              console.log("[FormBuilder] onSettingsSaved received newSettings:", newSettings)
+            onSettingsSaved={(newSettings, newSlug) => {
+              console.log("[FormBuilder] onSettingsSaved received newSettings:", newSettings, "newSlug:", newSlug)
               setForm((prev) => {
-                const updated = { ...prev, settings: newSettings }
+                const updated = {
+                  ...prev,
+                  settings: newSettings,
+                  ...(newSlug ? { slug: newSlug } : {}),
+                }
                 console.log("[FormBuilder] Updated local form state:", updated)
                 return updated
               })
+              if (newSlug) {
+                setSlug(newSlug)
+                setPublicUrl(`${window.location.origin}/f/${newSlug}`)
+              }
             }}
           />
 

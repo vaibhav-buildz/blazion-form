@@ -16,9 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Clock, Lock, ShieldAlert, Loader2, Mail, AtSign, Sparkles, Webhook, Award, CheckSquare, Plus, Trash2 } from "lucide-react"
-
-
+import { Clock, Lock, ShieldAlert, Loader2, Mail, AtSign, Sparkles, Webhook, Award, CheckSquare, Plus, Trash2, Layers, RefreshCw } from "lucide-react"
 
 interface FormSettingsDialogProps {
   form: {
@@ -27,7 +25,7 @@ interface FormSettingsDialogProps {
   }
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSettingsSaved?: (newSettings: Record<string, any>) => void
+  onSettingsSaved?: (newSettings: Record<string, any>, newSlug?: string) => void
 }
 
 export function FormSettingsDialog({
@@ -47,6 +45,8 @@ export function FormSettingsDialog({
   const [emailVerificationMode, setEmailVerificationMode] = React.useState<
     "none" | "login" | "otp"
   >("none")
+  const [conversationalMode, setConversationalMode] = React.useState<boolean>(false)
+  const [regenerateSlug, setRegenerateSlug] = React.useState<boolean>(false)
 
   // Batch A & C & D settings
   const [aiPersonaPrompt, setAiPersonaPrompt] = React.useState<string>("")
@@ -123,6 +123,9 @@ export function FormSettingsDialog({
           : [{ stage: 1, approverEmail: "" }]
       )
 
+      setConversationalMode(Boolean(settings.conversational_mode))
+      setRegenerateSlug(false)
+
       setSaveSuccess(false)
     }
   }, [open, form.settings])
@@ -172,6 +175,7 @@ export function FormSettingsDialog({
         notify_on_response: notifyOnResponse,
         email_verification_mode: emailVerificationMode,
         collect_email: emailVerificationMode !== "none",
+        conversational_mode: conversationalMode,
         aiPersonaPrompt: aiPersonaPrompt.trim() || null,
         webhookUrl: webhookUrl.trim() || null,
         webhookSecret: webhookSecret.trim() || null,
@@ -183,7 +187,6 @@ export function FormSettingsDialog({
         },
       }
 
-
       if (enablePassword) {
         if (passwordInput.trim()) {
           payloadSettings.password = passwordInput.trim()
@@ -192,12 +195,15 @@ export function FormSettingsDialog({
         payloadSettings.clear_password = true
       }
 
-      console.log("[FormSettingsDialog handleDone] Sending payloadSettings:", payloadSettings)
+      console.log("[FormSettingsDialog handleDone] Sending payloadSettings:", payloadSettings, "regenerateSlug:", regenerateSlug)
 
       const res = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: payloadSettings }),
+        body: JSON.stringify({
+          settings: payloadSettings,
+          regenerate_slug: regenerateSlug,
+        }),
       })
 
       if (!res.ok) {
@@ -209,7 +215,7 @@ export function FormSettingsDialog({
       console.log("[FormSettingsDialog handleDone] PATCH response updatedForm:", updatedForm)
 
       if (onSettingsSaved) {
-        onSettingsSaved(updatedForm.settings || {})
+        onSettingsSaved(updatedForm.settings || {}, updatedForm.slug)
       }
 
       setSaveSuccess(true)
@@ -349,6 +355,46 @@ export function FormSettingsDialog({
                 )}
               </div>
             )}
+          </div>
+
+          {/* Conversational Mode */}
+          <div className="space-y-3 border-b border-border pb-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="conversational-mode-toggle"
+                checked={conversationalMode}
+                onCheckedChange={(checked) => setConversationalMode(Boolean(checked))}
+              />
+              <Label
+                htmlFor="conversational-mode-toggle"
+                className="text-sm font-semibold cursor-pointer flex items-center gap-1.5"
+              >
+                <Layers className="h-4 w-4 text-muted-foreground" /> Conversational Mode (One question at a time)
+              </Label>
+            </div>
+            <p className="pl-6 text-xs text-muted-foreground">
+              Displays one question at a time with smooth step transitions, enter-key navigation, and an immersive password step.
+            </p>
+          </div>
+
+          {/* Regenerate Slug / Link Security */}
+          <div className="space-y-3 border-b border-border pb-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="regenerate-slug-toggle"
+                checked={regenerateSlug}
+                onCheckedChange={(checked) => setRegenerateSlug(Boolean(checked))}
+              />
+              <Label
+                htmlFor="regenerate-slug-toggle"
+                className="text-sm font-semibold cursor-pointer flex items-center gap-1.5 text-foreground"
+              >
+                <RefreshCw className="h-4 w-4 text-muted-foreground" /> Regenerate Form Link / Slug
+              </Label>
+            </div>
+            <p className="pl-6 text-xs text-muted-foreground">
+              Generates a new random URL and immediately invalidates the previous public link upon saving.
+            </p>
           </div>
 
           {/* D) Email Notifications */}

@@ -57,13 +57,23 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
-    let updateData = { ...body }
+    let updateData: Record<string, any> = {}
+    if (body.title !== undefined) updateData.title = body.title
+    if (body.description !== undefined) updateData.description = body.description
+    if (body.status !== undefined) updateData.status = body.status
+    if (body.slug !== undefined) updateData.slug = body.slug
+
+    if (body.regenerate_slug || body.settings?.regenerate_slug) {
+      const { nanoid } = await import("nanoid")
+      updateData.slug = nanoid(10)
+    }
 
     if (body.settings && typeof body.settings === "object") {
       const mergedSettings = {
         ...(existingForm.settings || {}),
         ...body.settings,
       }
+      delete mergedSettings.regenerate_slug
 
       // Handle server-side password hashing
       if (body.settings.password && typeof body.settings.password === "string") {

@@ -702,6 +702,23 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
   const answers = watch()
 
+  const activeQuestions = React.useMemo(() => {
+    return questions.filter((q) => q.type !== "section_break" && evaluateRules(q, answers))
+  }, [questions, answers])
+
+  const safeConversationalIndex = Math.min(
+    conversationalIndex,
+    Math.max(0, activeQuestions.length - 1)
+  )
+  const currentConversationalQuestion = activeQuestions[safeConversationalIndex]
+
+  const theme = form.settings?.theme || {}
+  const containerStyle: React.CSSProperties = {
+    backgroundColor: theme.backgroundColor || undefined,
+    fontFamily: theme.fontFamily ? `${theme.fontFamily}, sans-serif` : undefined,
+    color: theme.textColor || undefined,
+  }
+
   const handleNextSection = (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault()
@@ -791,9 +808,101 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
   }
 
   if (!isPasswordVerified) {
+    if (conversationalMode) {
+      return (
+        <div
+          data-testid="conversational-password-step"
+          className="min-h-screen flex flex-col justify-between bg-background text-foreground"
+          style={containerStyle}
+        >
+          {/* Top Header */}
+          <header className="w-full max-w-3xl mx-auto px-6 py-6 flex items-center justify-between border-b border-border/40">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border border-primary/20">
+                BF
+              </div>
+              <span className="font-semibold text-base tracking-tight truncate max-w-[200px] sm:max-w-xs">
+                {form.title}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs px-3 py-1 rounded-full bg-primary/10 text-primary font-semibold border border-primary/20 shadow-sm">
+                Step 0 • Password Gate
+              </span>
+              <LanguageToggle />
+            </div>
+          </header>
+
+          {/* Center Stage */}
+          <main className="flex-1 flex items-center justify-center p-6">
+            <div className="w-full max-w-md space-y-6">
+              <div className="space-y-3 text-center">
+                <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-inner border border-primary/20 ring-4 ring-primary/5">
+                  <Lock className="h-8 w-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                    Password Protected Form
+                  </h1>
+                  <p className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto">
+                    This form is presented in conversational mode. Enter the access password to start answering questions.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleVerifyPassword} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold text-muted-foreground">Access Password</Label>
+                  <PasswordInput
+                    data-testid="conversational-password-input"
+                    placeholder="Enter password"
+                    value={passwordInput}
+                    onChange={(e) => {
+                      setPasswordInput(e.target.value)
+                      setPasswordError(null)
+                    }}
+                    autoFocus
+                    required
+                    className="h-12 text-base px-4 border-2 focus-visible:ring-primary/20 rounded-xl"
+                  />
+                  {passwordError && (
+                    <p data-testid="conversational-password-error" className="text-xs text-destructive font-medium pt-1">
+                      {passwordError}
+                    </p>
+                  )}
+                </div>
+
+                <Button
+                  type="submit"
+                  data-testid="conversational-unlock-btn"
+                  disabled={isVerifyingPassword}
+                  className="w-full h-12 text-base font-semibold rounded-xl shadow-lg hover:shadow-primary/20 transition-all flex items-center justify-center gap-2"
+                >
+                  {isVerifyingPassword ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Unlock & Begin</span>
+                      <span className="text-xs opacity-80 border border-primary-foreground/30 px-1.5 py-0.5 rounded font-mono">↵</span>
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
+          </main>
+
+          {/* Footer */}
+          <footer className="w-full max-w-3xl mx-auto px-6 py-4 flex items-center justify-between text-xs text-muted-foreground border-t border-border/40">
+            <span>Conversational Experience</span>
+            <span>Press <strong>Enter ↵</strong> to proceed</span>
+          </footer>
+        </div>
+      )
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="max-w-md w-full p-8 space-y-6 border-border shadow-lg text-center">
+        <Card data-testid="password-gate" className="max-w-md w-full p-8 space-y-6 border-border shadow-lg text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Lock className="h-6 w-6" />
           </div>
@@ -841,7 +950,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
   }
 
   const onSubmit = async (data: Record<string, any>) => {
-    if (safeSectionIndex < totalSections - 1) {
+    if (!conversationalMode && safeSectionIndex < totalSections - 1) {
       return
     }
 
@@ -1102,13 +1211,6 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
     )
   }
 
-  const theme = form.settings?.theme || {}
-  const containerStyle: React.CSSProperties = {
-    backgroundColor: theme.backgroundColor || undefined,
-    fontFamily: theme.fontFamily ? `${theme.fontFamily}, sans-serif` : undefined,
-    color: theme.textColor || undefined,
-  }
-
   const answeredCount = Object.keys(answers).filter(
     (k) => answers[k] && (!Array.isArray(answers[k]) || answers[k].length > 0)
   ).length
@@ -1154,7 +1256,9 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
         <div className="space-y-1.5">
           <div className="flex justify-between items-center text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <span>
-              {totalSections > 1
+              {conversationalMode
+                ? `Question ${safeConversationalIndex + 1} of ${activeQuestions.length} (${Math.round(((safeConversationalIndex + 1) / Math.max(1, activeQuestions.length)) * 100)}%)`
+                : totalSections > 1
                 ? `Step ${safeSectionIndex + 1} of ${totalSections} (${progressPercent}%)`
                 : `${progressPercent}% Completed`}
             </span>
@@ -1166,22 +1270,29 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
             <div
               className="h-full bg-primary transition-all duration-300 ease-in-out"
               style={{
-                width:
-                  totalSections > 1
-                    ? `${((safeSectionIndex + 1) / totalSections) * 100}%`
-                    : `${progressPercent}%`,
+                width: conversationalMode
+                  ? `${Math.round(((safeConversationalIndex + 1) / Math.max(1, activeQuestions.length)) * 100)}%`
+                  : totalSections > 1
+                  ? `${((safeSectionIndex + 1) / totalSections) * 100}%`
+                  : `${progressPercent}%`,
               }}
             />
           </div>
         </div>
 
-
         {/* Form Title & Description Header Card */}
         <Card className="p-8 border-border shadow-sm space-y-3">
           <div className="flex items-start justify-between gap-4">
-            <h1 className="text-3xl font-bold text-foreground tracking-tight flex-1">
-              {form.title}
-            </h1>
+            <div className="space-y-1 flex-1">
+              {conversationalMode && (
+                <span className="inline-block text-[11px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2.5 py-0.5 rounded border border-primary/20">
+                  Conversational Mode
+                </span>
+              )}
+              <h1 className="text-3xl font-bold text-foreground tracking-tight">
+                {form.title}
+              </h1>
+            </div>
             <LanguageToggle className="shrink-0" />
           </div>
           {form.description && (
@@ -1210,50 +1321,13 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
           )}
         </Card>
 
-        {/* PASSWORD PROTECTION GATE */}
-        {!isPasswordVerified && (
-          <Card className="p-8 border-border shadow-sm text-center space-y-4">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Lock className="h-6 w-6" />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="text-xl font-bold text-foreground">Password Protected Form</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                This form requires a password to view and submit responses.
-              </p>
-            </div>
-            <form onSubmit={handleVerifyPassword} className="max-w-xs mx-auto space-y-3">
-              <Input
-                type="password"
-                placeholder="Enter password"
-                value={passwordInput}
-                onChange={(e) => {
-                  setPasswordInput(e.target.value)
-                  setPasswordError(null)
-                }}
-                required
-                className="text-center"
-              />
-              {passwordError && (
-                <p className="text-xs font-medium text-destructive">{passwordError}</p>
-              )}
-              <Button type="submit" disabled={isVerifyingPassword} className="w-full font-semibold">
-                {isVerifyingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Unlock Form
-              </Button>
-            </form>
-          </Card>
+        {/* Loading Spinner for Auth Check */}
+        {verificationMode === "login" && isCheckingAuth && (
+          <div className="flex items-center justify-center p-8 space-x-2 text-muted-foreground text-sm">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span>Checking account status...</span>
+          </div>
         )}
-
-        {isPasswordVerified && (
-          <>
-            {/* Loading Spinner for Auth Check */}
-            {verificationMode === "login" && isCheckingAuth && (
-              <div className="flex items-center justify-center p-8 space-x-2 text-muted-foreground text-sm">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span>Checking account status...</span>
-              </div>
-            )}
 
             {/* MODE 'login' Gate: Unauthenticated User */}
             {verificationMode === "login" && !isCheckingAuth && !userEmail && (
@@ -1401,13 +1475,34 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
             <form
               onSubmit={(e) => {
                 e.preventDefault()
-                if (safeSectionIndex < totalSections - 1) {
+                if (!conversationalMode && safeSectionIndex < totalSections - 1) {
                   return
                 }
                 handleSubmit(onSubmit, onError)(e)
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && safeSectionIndex < totalSections - 1) {
+                if (conversationalMode) {
+                  if (e.key === "Enter") {
+                    const target = e.target as HTMLElement
+                    if (target.tagName !== "TEXTAREA") {
+                      e.preventDefault()
+                      if (safeConversationalIndex < activeQuestions.length - 1) {
+                        if (currentConversationalQuestion) {
+                          const err = validateQuestion(currentConversationalQuestion, answers)
+                          if (err) {
+                            setError(currentConversationalQuestion.id, { type: "manual", message: err })
+                            return
+                          }
+                        }
+                        setConversationalIndex((prev) =>
+                          Math.min(activeQuestions.length - 1, prev + 1)
+                        )
+                      } else {
+                        handleSubmit(onSubmit, onError)(e)
+                      }
+                    }
+                  }
+                } else if (e.key === "Enter" && safeSectionIndex < totalSections - 1) {
                   const target = e.target as HTMLElement
                   if (target.tagName !== "TEXTAREA") {
                     e.preventDefault()
@@ -1419,7 +1514,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
             >
 
           {/* Respondent Email Field (only when NOT in 'login' mode, and either collect_email is true or mode is 'otp') */}
-          {verificationMode !== "login" && (form.settings?.collect_email || verificationMode === "otp") && safeSectionIndex === 0 && (
+          {verificationMode !== "login" && (form.settings?.collect_email || verificationMode === "otp") && (!conversationalMode ? safeSectionIndex === 0 : safeConversationalIndex === 0) && (
             <Card className="p-6 border-border shadow-sm space-y-3">
               <div>
                 <Label htmlFor="respondent-email" className="text-base font-semibold text-foreground flex items-center gap-1">
@@ -1449,7 +1544,10 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
             </Card>
           )}
 
-          {currentSection.questions.map((question) => {
+          {(conversationalMode
+            ? (currentConversationalQuestion ? [currentConversationalQuestion] : [])
+            : currentSection.questions
+          ).map((question) => {
             if (!evaluateRules(question, answers)) {
               return null
             }
@@ -1784,46 +1882,99 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
           {/* Navigation Controls */}
           <div className="flex items-center justify-between pt-4">
-            {safeSectionIndex > 0 ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={handlePrevSection}
-                className="px-6 font-semibold"
-              >
-                Previous
-              </Button>
-            ) : (
-              <div />
-            )}
+            {conversationalMode ? (
+              <>
+                {safeConversationalIndex > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    data-testid="conversational-prev-btn"
+                    onClick={() => setConversationalIndex((prev) => Math.max(0, prev - 1))}
+                    className="px-6 font-semibold"
+                  >
+                    ← Previous
+                  </Button>
+                ) : (
+                  <div />
+                )}
 
-            {safeSectionIndex < totalSections - 1 ? (
-              <Button
-                type="button"
-                size="lg"
-                onClick={handleNextSection}
-                className="px-8 font-semibold"
-              >
-                Next
-              </Button>
+                {safeConversationalIndex < activeQuestions.length - 1 ? (
+                  <Button
+                    type="button"
+                    size="lg"
+                    data-testid="conversational-next-btn"
+                    onClick={() => {
+                      if (currentConversationalQuestion) {
+                        const err = validateQuestion(currentConversationalQuestion, answers)
+                        if (err) {
+                          setError(currentConversationalQuestion.id, { type: "manual", message: err })
+                          return
+                        }
+                      }
+                      setConversationalIndex((prev) =>
+                        Math.min(activeQuestions.length - 1, prev + 1)
+                      )
+                    }}
+                    className="px-8 font-semibold shadow-md"
+                  >
+                    Next Question ↵
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    data-testid="conversational-submit-btn"
+                    disabled={isSubmitting}
+                    size="lg"
+                    className="px-8 font-semibold shadow-md"
+                  >
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Submit Response ✓
+                  </Button>
+                )}
+              </>
             ) : (
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                size="lg"
-                className="px-8 font-semibold"
-              >
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit
-              </Button>
+              <>
+                {safeSectionIndex > 0 ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    onClick={handlePrevSection}
+                    className="px-6 font-semibold"
+                  >
+                    Previous
+                  </Button>
+                ) : (
+                  <div />
+                )}
+
+                {safeSectionIndex < totalSections - 1 ? (
+                  <Button
+                    type="button"
+                    size="lg"
+                    onClick={handleNextSection}
+                    className="px-8 font-semibold"
+                  >
+                    Next
+                  </Button>
+                ) : (
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting}
+                    size="lg"
+                    className="px-8 font-semibold"
+                  >
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Submit
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </form>
       </>
     )}
-    </>
-  )}
   </div>
 </div>
   )
