@@ -61,6 +61,7 @@ export function FormSettingsDialog({
 
   const [isSaving, setIsSaving] = React.useState(false)
   const [saveSuccess, setSaveSuccess] = React.useState(false)
+  const [saveError, setSaveError] = React.useState<string | null>(null)
 
 
   const hasExistingHash = Boolean(form.settings?.password_hash)
@@ -217,7 +218,7 @@ export function FormSettingsDialog({
       }, 300)
     } catch (err: any) {
       console.error("Save settings error:", err)
-      alert(err.message || "Failed to save form settings")
+      setSaveError(err.message || "Failed to save form settings")
     } finally {
       setIsSaving(false)
     }
@@ -239,6 +240,12 @@ export function FormSettingsDialog({
             Configure optional access rules, expiry date, response limits, and email collection.
           </DialogDescription>
         </DialogHeader>
+
+        {saveError && (
+          <div className="mx-6 mt-4 p-3 bg-destructive/15 border border-destructive/30 rounded-lg text-destructive text-xs font-medium">
+            {saveError}
+          </div>
+        )}
 
         <div className="space-y-6 p-6 overflow-y-auto flex-1">
           {/* A) Form Expiry */}
