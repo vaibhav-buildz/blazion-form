@@ -108,7 +108,7 @@ export function ThemeStudioModal({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-pink-50 dark:bg-pink-950/50 text-pink-600 dark:text-pink-400">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
               <Palette className="w-5 h-5" />
             </div>
             <DialogTitle className="text-xl font-bold">Form Theme Studio</DialogTitle>
@@ -120,7 +120,7 @@ export function ThemeStudioModal({
           <div className="space-y-6">
             {/* Primary Accent Color */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
                 Primary Accent Color
               </label>
               <div className="flex items-center gap-3">
@@ -131,7 +131,7 @@ export function ThemeStudioModal({
                     onClick={() => setTheme({ ...theme, primaryColor: c })}
                     style={{ backgroundColor: c }}
                     className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform ${
-                      theme.primaryColor === c ? "scale-125 ring-2 ring-offset-2 ring-slate-900" : "hover:scale-110"
+                      theme.primaryColor === c ? "scale-125 ring-2 ring-offset-2 ring-foreground" : "hover:scale-110"
                     }`}
                   >
                     {theme.primaryColor === c && <Check className="w-4 h-4 text-white" />}
@@ -142,7 +142,7 @@ export function ThemeStudioModal({
 
             {/* Typography */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
                 Font Family
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -153,8 +153,8 @@ export function ThemeStudioModal({
                     onClick={() => setTheme({ ...theme, fontFamily: f.id as any })}
                     className={`px-3 py-2 rounded-lg text-xs font-medium border text-left transition ${
                       theme.fontFamily === f.id
-                        ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
-                        : "border-slate-200 dark:border-slate-800 hover:bg-slate-50"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:bg-muted/50"
                     }`}
                   >
                     {f.name}
@@ -165,7 +165,7 @@ export function ThemeStudioModal({
 
             {/* Background Style */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
                 Background Theme
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -176,8 +176,8 @@ export function ThemeStudioModal({
                     onClick={() => setTheme({ ...theme, background: b.id as any })}
                     className={`flex items-center gap-2 p-2 rounded-xl border text-left transition ${
                       theme.background === b.id
-                        ? "border-slate-900 ring-2 ring-slate-900/20"
-                        : "border-slate-200 dark:border-slate-800"
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-border"
                     }`}
                   >
                     <div className={`w-6 h-6 rounded-lg border shadow-2xs ${b.preview}`} />
@@ -189,7 +189,7 @@ export function ThemeStudioModal({
 
             {/* Button Shape */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
                 Button Shape
               </label>
               <div className="flex gap-2">
@@ -200,8 +200,8 @@ export function ThemeStudioModal({
                     onClick={() => setTheme({ ...theme, buttonShape: btn.id as any })}
                     className={`flex-1 py-2 text-xs font-semibold border transition ${btn.radius} ${
                       theme.buttonShape === btn.id
-                        ? "border-slate-900 bg-slate-900 text-white dark:border-white dark:bg-white dark:text-slate-900"
-                        : "border-slate-200 hover:bg-slate-50"
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border hover:bg-muted/50"
                     }`}
                   >
                     {btn.name}
@@ -213,13 +213,13 @@ export function ThemeStudioModal({
             {/* Card & Logo */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
                   Card Style
                 </label>
                 <select
                   value={theme.cardStyle}
                   onChange={(e) => setTheme({ ...theme, cardStyle: e.target.value as any })}
-                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-border bg-background text-foreground"
                 >
                   {cardStyles.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -230,10 +230,10 @@ export function ThemeStudioModal({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
                   Logo Position
                 </label>
-                <div className="flex rounded-xl border border-slate-300 dark:border-slate-700 overflow-hidden text-xs">
+                <div className="flex rounded-xl border border-border overflow-hidden text-xs">
                   {logoPositions.map((pos) => (
                     <button
                       key={pos.id}
@@ -241,8 +241,8 @@ export function ThemeStudioModal({
                       onClick={() => setTheme({ ...theme, logoPosition: pos.id as any })}
                       className={`flex-1 py-2 text-center transition ${
                         theme.logoPosition === pos.id
-                          ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-semibold"
-                          : "text-slate-600 hover:bg-slate-100"
+                          ? "bg-primary text-primary-foreground font-semibold"
+                          : "text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       {pos.name}
@@ -255,7 +255,7 @@ export function ThemeStudioModal({
 
           {/* Live Preview Panel */}
           <div className="flex flex-col">
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
               Live Theme Preview
             </label>
             <div
