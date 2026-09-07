@@ -135,13 +135,13 @@ export default function RespondentPortalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-foreground py-12 px-4 sm:px-6">
+    <div className="min-h-screen bg-background text-foreground py-12 px-4 sm:px-6">
       <div className="mx-auto max-w-3xl space-y-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/20">
+              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-md shadow-primary/20">
                 ⚡
               </div>
               <h1 className="text-2xl font-bold tracking-tight">Respondent Portal</h1>
@@ -182,7 +182,7 @@ export default function RespondentPortalPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2 text-sm"
             >
               {isLoading ? (
                 <>
@@ -257,9 +257,9 @@ export default function RespondentPortalPage() {
                               report: sub.personaReport!,
                             })
                           }
-                          className="text-xs gap-1.5 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/40"
+                          className="text-xs gap-1.5 text-primary border-primary/20 hover:bg-primary/10"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-purple-600" /> View AI Persona Insights
+                          <Sparkles className="w-3.5 h-3.5 text-primary" /> View AI Persona Insights
                         </Button>
                       )}
 
@@ -285,7 +285,7 @@ export default function RespondentPortalPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
             <Card className="max-w-lg w-full p-6 border-border shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-border pb-3">
-                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
+                <div className="flex items-center gap-2 text-primary">
                   <Sparkles className="w-5 h-5" />
                   <h3 className="font-bold text-base">AI Persona Feedback</h3>
                 </div>
@@ -301,7 +301,7 @@ export default function RespondentPortalPage() {
                 <div className="text-xs font-semibold text-muted-foreground uppercase">
                   {selectedPersonaReport.title}
                 </div>
-                <div className="p-4 bg-purple-50/60 dark:bg-purple-950/20 rounded-xl border border-purple-100 dark:border-purple-900/40 text-xs text-foreground leading-relaxed whitespace-pre-line max-h-80 overflow-y-auto font-sans">
+                <div className="p-4 bg-primary/5 rounded-xl border border-primary/20 text-xs text-foreground leading-relaxed whitespace-pre-line max-h-80 overflow-y-auto font-sans">
                   {selectedPersonaReport.report}
                 </div>
               </div>

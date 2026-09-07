@@ -75,6 +75,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
   const [isThemeOpen, setIsThemeOpen] = React.useState(false)
   const [isHistoryOpen, setIsHistoryOpen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
+  const [mobileTab, setMobileTab] = React.useState<"palette" | "canvas" | "inspector">("canvas")
 
 
   React.useEffect(() => {
@@ -265,6 +266,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
 
     setQuestions((prev) => [...prev, newQuestion])
     setSelectedQuestionId(newQuestion.id)
+    setMobileTab("canvas")
 
     try {
       await fetch("/api/questions/create", {
@@ -367,27 +369,58 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
 
     <div className="flex flex-col h-screen overflow-hidden bg-background">
       {/* Top Navigation Bar */}
-      <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6 shrink-0">
-        <div className="flex items-center gap-4">
+      <header className="flex flex-col lg:flex-row min-h-16 items-center justify-between border-b border-border bg-card px-4 lg:px-6 py-2.5 lg:py-0 gap-2 shrink-0">
+        <div className="flex items-center justify-between w-full lg:w-auto gap-3">
           <Link
             href="/dashboard"
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors shrink-0"
           >
             ← Back to Dashboard
           </Link>
+
+          {/* Mobile Tab Switcher */}
+          <div className="flex lg:hidden items-center bg-muted/60 p-0.5 rounded-lg border border-border text-xs">
+            <button
+              type="button"
+              onClick={() => setMobileTab("palette")}
+              className={`px-2 py-1 rounded-md font-medium transition ${
+                mobileTab === "palette" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground"
+              }`}
+            >
+              Fields
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("canvas")}
+              className={`px-2 py-1 rounded-md font-medium transition ${
+                mobileTab === "canvas" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground"
+              }`}
+            >
+              Canvas
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileTab("inspector")}
+              className={`px-2 py-1 rounded-md font-medium transition ${
+                mobileTab === "inspector" ? "bg-card text-foreground shadow-2xs font-semibold" : "text-muted-foreground"
+              }`}
+            >
+              Inspector
+            </button>
+          </div>
         </div>
 
-        <div className="w-1/3 max-w-md">
+        <div className="w-full lg:w-1/3 max-w-md">
           <Input
             disabled={isLocked}
             value={title}
             onChange={(e) => handleTitleChange(e.target.value)}
-            className="text-center font-semibold text-lg border-transparent hover:border-border focus:border-border disabled:opacity-100"
+            className="text-center font-semibold text-base sm:text-lg border-transparent hover:border-border focus:border-border disabled:opacity-100 h-9"
             placeholder="Untitled Form"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto max-w-full pb-1 lg:pb-0 shrink-0">
           {/* Multilingual Switcher */}
           <LanguageToggle className="mr-1" />
 
@@ -555,7 +588,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
       {/* Main 3-Column Layout */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar: Question Types */}
-        <aside className="w-64 border-r border-border bg-card p-4 space-y-4 shrink-0 overflow-y-auto">
+        <aside className={`${mobileTab === "palette" ? "flex flex-col w-full" : "hidden"} lg:block lg:w-64 border-r border-border bg-card p-4 space-y-4 shrink-0 overflow-y-auto`}>
           <fieldset disabled={isLocked} className="space-y-4">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
@@ -590,7 +623,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
         </aside>
 
         {/* Center Canvas */}
-        <main className="flex-1 bg-background p-8 overflow-y-auto">
+        <main className={`${mobileTab === "canvas" ? "flex-1" : "hidden"} lg:block lg:flex-1 bg-background p-4 sm:p-8 overflow-y-auto`}>
           <div className="mx-auto max-w-2xl space-y-6">
             <Card className="p-6">
               <Input
@@ -673,7 +706,12 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
                         question={question}
                         disabled={isLocked}
                         isSelected={selectedQuestionId === question.id}
-                        onSelect={setSelectedQuestionId}
+                        onSelect={(id) => {
+                          setSelectedQuestionId(id)
+                          if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                            setMobileTab("inspector")
+                          }
+                        }}
                         onUpdate={handleUpdateQuestion}
                         onDelete={handleDeleteQuestion}
                       />
@@ -689,7 +727,12 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
                     question={question}
                     disabled={isLocked}
                     isSelected={selectedQuestionId === question.id}
-                    onSelect={setSelectedQuestionId}
+                    onSelect={(id) => {
+                      setSelectedQuestionId(id)
+                      if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                        setMobileTab("inspector")
+                      }
+                    }}
                     onUpdate={handleUpdateQuestion}
                     onDelete={handleDeleteQuestion}
                   />
@@ -700,19 +743,40 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
         </main>
 
         {/* Right Sidebar: Settings / Inspector */}
-        <aside className="w-72 border-l border-border bg-card p-6 shrink-0 overflow-y-auto">
+        <aside className={`${mobileTab === "inspector" ? "flex flex-col w-full" : "hidden"} lg:block lg:w-72 border-l border-border bg-card p-4 sm:p-6 shrink-0 overflow-y-auto`}>
           {selectedQuestion ? (
-            <QuestionSettings 
-              question={selectedQuestion}
-              questions={questions} 
-              disabled={isLocked}
-              onUpdate={handleUpdateQuestion} 
-            />
+            <div className="space-y-4">
+              <div className="flex lg:hidden items-center justify-between pb-2 border-b border-border">
+                <span className="text-xs font-semibold text-muted-foreground uppercase">Field Settings</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMobileTab("canvas")}
+                  className="h-7 text-xs px-2"
+                >
+                  ← Back to Canvas
+                </Button>
+              </div>
+              <QuestionSettings 
+                question={selectedQuestion}
+                questions={questions} 
+                disabled={isLocked}
+                onUpdate={handleUpdateQuestion} 
+              />
+            </div>
           ) : (
-            <div className="flex h-full items-center justify-center text-center">
-              <p className="text-sm text-muted-foreground">
+            <div className="flex h-full flex-col items-center justify-center text-center p-4">
+              <p className="text-sm text-muted-foreground mb-3">
                 Select a question to edit its settings
               </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMobileTab("canvas")}
+                className="lg:hidden text-xs"
+              >
+                Back to Canvas
+              </Button>
             </div>
           )}
         </aside>
