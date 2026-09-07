@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Clock, Lock, ShieldAlert, Loader2, Mail, AtSign, Sparkles, Webhook, Award, CheckSquare, Plus, Trash2, Layers, RefreshCw } from "lucide-react"
+import { Clock, Lock, ShieldAlert, Loader2, Mail, AtSign, Sparkles, Webhook, Award, CheckSquare, Plus, Trash2, Layers } from "lucide-react"
 
 interface FormSettingsDialogProps {
   form: {
@@ -46,7 +46,6 @@ export function FormSettingsDialog({
     "none" | "login" | "otp"
   >("none")
   const [conversationalMode, setConversationalMode] = React.useState<boolean>(false)
-  const [regenerateSlug, setRegenerateSlug] = React.useState<boolean>(false)
 
   // Batch A & C & D settings
   const [aiPersonaPrompt, setAiPersonaPrompt] = React.useState<string>("")
@@ -124,7 +123,6 @@ export function FormSettingsDialog({
       )
 
       setConversationalMode(Boolean(settings.conversational_mode))
-      setRegenerateSlug(false)
 
       setSaveSuccess(false)
     }
@@ -195,14 +193,13 @@ export function FormSettingsDialog({
         payloadSettings.clear_password = true
       }
 
-      console.log("[FormSettingsDialog handleDone] Sending payloadSettings:", payloadSettings, "regenerateSlug:", regenerateSlug)
+      console.log("[FormSettingsDialog handleDone] Sending payloadSettings:", payloadSettings)
 
       const res = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           settings: payloadSettings,
-          regenerate_slug: regenerateSlug,
         }),
       })
 
@@ -374,26 +371,6 @@ export function FormSettingsDialog({
             </div>
             <p className="pl-6 text-xs text-muted-foreground">
               Displays one question at a time with smooth step transitions, enter-key navigation, and an immersive password step.
-            </p>
-          </div>
-
-          {/* Regenerate Slug / Link Security */}
-          <div className="space-y-3 border-b border-border pb-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="regenerate-slug-toggle"
-                checked={regenerateSlug}
-                onCheckedChange={(checked) => setRegenerateSlug(Boolean(checked))}
-              />
-              <Label
-                htmlFor="regenerate-slug-toggle"
-                className="text-sm font-semibold cursor-pointer flex items-center gap-1.5 text-foreground"
-              >
-                <RefreshCw className="h-4 w-4 text-muted-foreground" /> Regenerate Form Link / Slug
-              </Label>
-            </div>
-            <p className="pl-6 text-xs text-muted-foreground">
-              Generates a new random URL and immediately invalidates the previous public link upon saving.
             </p>
           </div>
 

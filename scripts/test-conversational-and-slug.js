@@ -101,16 +101,17 @@ async function runTests() {
 
     const dialog = page.locator('div[role="dialog"]')
 
-    // Toggle Regenerate Slug checkbox
-    const slugToggle = dialog.locator('#regenerate-slug-toggle')
-    await slugToggle.scrollIntoViewIfNeeded()
-    await slugToggle.check()
-    console.log("Checked 'Regenerate Form Link / Slug' toggle.")
+    // Verify that 'regenerate-slug-toggle' does NOT exist (no opt-in choice)
+    const slugToggleCount = await dialog.locator('#regenerate-slug-toggle').count()
+    if (slugToggleCount > 0) {
+      throw new Error("Found #regenerate-slug-toggle in FormSettingsDialog! It should be removed entirely.")
+    }
+    console.log("✓ Verified #regenerate-slug-toggle is completely removed (no opt-in toggle).")
 
-    // Click Done to save settings
+    // Click Done to save settings (published form must automatically regenerate slug)
     await dialog.locator('button:has-text("Done")').click()
     await page.waitForTimeout(1500)
-    console.log("Saved settings with slug regeneration.")
+    console.log("Saved settings on published form (automatic slug regeneration expected).")
 
     // Fetch updated form from Supabase
     const { data: updatedFormData } = await supabaseAdmin
@@ -123,11 +124,15 @@ async function runTests() {
     console.log(`New Form Slug in Supabase: ${newSlug}`)
 
     if (!newSlug || newSlug === initialSlug) {
-      throw new Error(`Slug was not regenerated! Old: ${initialSlug}, New: ${newSlug}`)
+      throw new Error(`Slug was not automatically regenerated! Old: ${initialSlug}, New: ${newSlug}`)
     }
-    console.log(`✓ Slug successfully regenerated from '${initialSlug}' to '${newSlug}'!`)
+    console.log(`✓ Slug was automatically regenerated from '${initialSlug}' to '${newSlug}'!`)
     results.slugRegeneration = true
-    results.details.push(`Slug regenerated from ${initialSlug} to ${newSlug}`)
+    results.details.push(`Slug automatically regenerated from ${initialSlug} to ${newSlug}`)
+
+    // Check notice in FormBuilder UI
+    const noticeVisible = await page.locator('[data-testid="slug-changed-notice"]').isVisible()
+    console.log(`✓ Slug changed notice banner visible: ${noticeVisible}`)
 
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, "slug_regenerated_builder.png") })
 

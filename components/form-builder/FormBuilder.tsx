@@ -76,6 +76,7 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
   const [isHistoryOpen, setIsHistoryOpen] = React.useState(false)
   const [isMounted, setIsMounted] = React.useState(false)
   const [mobileTab, setMobileTab] = React.useState<"palette" | "canvas" | "inspector">("canvas")
+  const [slugChangedNotice, setSlugChangedNotice] = React.useState<string | null>(null)
 
 
   React.useEffect(() => {
@@ -524,7 +525,11 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
               })
               if (newSlug) {
                 setSlug(newSlug)
-                setPublicUrl(`${window.location.origin}/f/${newSlug}`)
+                const newUrl = `${window.location.origin}/f/${newSlug}`
+                setPublicUrl(newUrl)
+                if (status === "published" && newSlug !== slug) {
+                  setSlugChangedNotice(newUrl)
+                }
               }
             }}
           />
@@ -590,6 +595,29 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
               )}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Notice when slug was automatically changed */}
+      {slugChangedNotice && (
+        <div
+          data-testid="slug-changed-notice"
+          className="bg-amber-500/15 border-b border-amber-500/30 px-6 py-2.5 flex items-center justify-between text-xs text-amber-800 dark:text-amber-300 font-medium shrink-0"
+        >
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <span>
+              Your form&apos;s link has changed because settings were updated:{" "}
+              <strong className="font-mono underline">{slugChangedNotice}</strong>
+            </span>
+          </div>
+          <button
+            onClick={() => setSlugChangedNotice(null)}
+            className="hover:opacity-75 font-semibold px-2 py-0.5"
+            aria-label="Dismiss notice"
+          >
+            ✕
+          </button>
         </div>
       )}
 

@@ -45,7 +45,7 @@ export async function PATCH(
     // Verify form belongs to user and get existing settings
     const { data: existingForm, error: fetchError } = await supabase
       .from("forms")
-      .select("user_id, settings")
+      .select("user_id, settings, status")
       .eq("id", id)
       .single()
 
@@ -63,7 +63,11 @@ export async function PATCH(
     if (body.status !== undefined) updateData.status = body.status
     if (body.slug !== undefined) updateData.slug = body.slug
 
-    if (body.regenerate_slug || body.settings?.regenerate_slug) {
+    const isPublished = existingForm.status === "published"
+    const isUpdatingSettings = body.settings && typeof body.settings === "object"
+
+    // Automatic slug regeneration whenever settings are updated on an already-published form
+    if (body.regenerate_slug || body.settings?.regenerate_slug || (isPublished && isUpdatingSettings)) {
       const { nanoid } = await import("nanoid")
       updateData.slug = nanoid(10)
     }
