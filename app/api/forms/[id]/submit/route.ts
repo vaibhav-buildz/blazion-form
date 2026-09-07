@@ -10,6 +10,7 @@ import {
 import { evaluateSpamScoreWithAI, generatePersonaReportWithAI } from "@/lib/ai"
 import { generateCertificatePdf } from "@/lib/certificate"
 import { createApprovalToken } from "@/lib/approval-token"
+import { formatDateTimeDDMMYYYY } from "@/lib/utils"
 
 
 export async function POST(
@@ -369,10 +370,7 @@ export async function POST(
 
           const origin = new URL(req.url).origin
           const responseUrl = `${origin}/dashboard/forms/${form.id}/responses`
-          const submittedAt = new Date().toLocaleString("en-US", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })
+          const submittedAt = formatDateTimeDDMMYYYY(new Date())
 
           const html = generateNotificationEmail({
             formTitle: form.title || "Untitled Form",
@@ -428,10 +426,7 @@ export async function POST(
           }
         }
 
-        const submittedAt = new Date().toLocaleString("en-US", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        })
+        const submittedAt = formatDateTimeDDMMYYYY(new Date())
 
         const respondentHtml = generateRespondentConfirmationEmail({
           formTitle: form.title || "Untitled Form",

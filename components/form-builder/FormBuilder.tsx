@@ -623,14 +623,15 @@ export function FormBuilder({ form: initialForm, initialQuestions = [] }: FormBu
                   setSelectedQuestionId(tempId)
 
                   try {
-                    const res = await fetch(`/api/forms/${form.id}/questions`, {
+                    const res = await fetch("/api/questions/create", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
+                        form_id: form.id,
                         title: suggested.title,
                         type: suggested.type,
                         required: false,
-                        order: newOrder,
+                        position: newOrder,
                         options: newQuestion.options,
                         settings: {},
                         rules: [],

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { PasswordInput } from "@/components/ui/password-input"
+import { Loader2 } from "lucide-react"
 
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -223,7 +224,14 @@ export default function SignupPage() {
                 />
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Signing up..." : "Sign up"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing up...
+                    </>
+                  ) : (
+                    "Sign up"
+                  )}
                 </Button>
               </form>
             </Form>

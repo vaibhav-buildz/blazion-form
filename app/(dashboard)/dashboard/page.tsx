@@ -52,14 +52,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl p-8 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Your Forms</h1>
           <p className="text-sm text-muted-foreground">
             Manage and view your created forms
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <TeamWorkspaceModal />
           <TemplatesModalButton />
           <GenerateWithAIButton />
@@ -68,11 +68,11 @@ export default async function DashboardPage() {
       </div>
 
       {!forms || forms.length === 0 ? (
-        <div className="rounded-lg border-2 border-dashed border-border p-12 text-center bg-card">
+        <div className="rounded-lg border-2 border-dashed border-border p-8 sm:p-12 text-center bg-card">
           <p className="text-sm text-muted-foreground mb-4">
             No forms yet. Create your first form, generate one with AI, or pick from our ready-made templates.
           </p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
             <TeamWorkspaceModal />
             <TemplatesModalButton />
             <GenerateWithAIButton />

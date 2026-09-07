@@ -368,9 +368,11 @@ export function TemplatesModalButton() {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [creatingId, setCreatingId] = React.useState<string | null>(null)
+  const [templateError, setTemplateError] = React.useState<string | null>(null)
 
-  const handleUseTemplate = async (template: TemplateDef) => {
+  const handleUseTemplate = async (template: typeof TEMPLATES[0]) => {
     setCreatingId(template.id)
+    setTemplateError(null)
     try {
       const res = await fetch("/api/forms/template", {
         method: "POST",
@@ -389,7 +391,7 @@ export function TemplatesModalButton() {
       setOpen(false)
       router.push(`/dashboard/forms/${data.formId}/edit`)
     } catch (err: any) {
-      alert(err.message || "Failed to create form")
+      setTemplateError(err.message || "Failed to create form")
       setCreatingId(null)
     }
   }
@@ -397,8 +399,8 @@ export function TemplatesModalButton() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2 text-sm">
-          <LayoutTemplate className="w-4 h-4 text-indigo-600" />
+        <Button variant="outline" className="gap-2 text-sm border-border hover:bg-muted/50">
+          <LayoutTemplate className="w-4 h-4 text-primary" />
           <span>Templates</span>
         </Button>
       </DialogTrigger>
@@ -406,7 +408,7 @@ export function TemplatesModalButton() {
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-600">
+            <div className="p-2 rounded-lg bg-primary/10 text-primary">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -416,6 +418,11 @@ export function TemplatesModalButton() {
               </DialogDescription>
             </div>
           </div>
+          {templateError && (
+            <div className="mt-3 p-3 bg-destructive/15 border border-destructive/30 rounded-lg text-destructive text-xs font-medium">
+              {templateError}
+            </div>
+          )}
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3">
@@ -425,7 +432,7 @@ export function TemplatesModalButton() {
             return (
               <Card
                 key={tmpl.id}
-                className="p-5 border-border hover:border-indigo-500/50 transition-all flex flex-col justify-between space-y-4 hover:shadow-md"
+                className="p-5 border-border hover:border-primary/50 transition-all flex flex-col justify-between space-y-4 hover:shadow-md"
               >
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
@@ -465,7 +472,7 @@ export function TemplatesModalButton() {
                   <Button
                     onClick={() => handleUseTemplate(tmpl)}
                     disabled={Boolean(creatingId)}
-                    className="w-full justify-between text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                    className="w-full justify-between text-xs"
                   >
                     {isSelected ? (
                       <>

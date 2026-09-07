@@ -70,7 +70,9 @@ export function QuestionSettings({
   )
 
   const priorQuestions = React.useMemo(() => {
-    return (questions || []).filter((q) => q.position < question.position)
+    return (questions || []).filter(
+      (q) => q.position < question.position && q.type !== "section_break"
+    )
   }, [questions, question.position])
 
   const handleAddRule = () => {

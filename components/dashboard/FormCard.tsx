@@ -30,7 +30,9 @@ import {
   BarChart3,
   MoreVertical,
   Copy,
+  AlertCircle,
 } from "lucide-react"
+import { formatDateDDMMYYYY } from "@/lib/utils"
 
 interface FormCardProps {
   form: {
@@ -49,9 +51,11 @@ export function FormCard({ form }: FormCardProps) {
   const [isDeleting, setIsDeleting] = React.useState(false)
   const [isDuplicating, setIsDuplicating] = React.useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false)
+  const [cardError, setCardError] = React.useState<string | null>(null)
 
   const handleDelete = async () => {
     setIsDeleting(true)
+    setCardError(null)
     try {
       const res = await fetch(`/api/forms/${form.id}`, {
         method: "DELETE",
@@ -65,7 +69,7 @@ export function FormCard({ form }: FormCardProps) {
       router.refresh()
     } catch (err: any) {
       console.error("Delete form error:", err)
-      alert(err.message || "Failed to delete form")
+      setCardError(err.message || "Failed to delete form")
     } finally {
       setIsDeleting(false)
     }
@@ -73,6 +77,7 @@ export function FormCard({ form }: FormCardProps) {
 
   const handleDuplicate = async () => {
     setIsDuplicating(true)
+    setCardError(null)
     try {
       const res = await fetch(`/api/forms/${form.id}/duplicate`, {
         method: "POST",
@@ -85,7 +90,7 @@ export function FormCard({ form }: FormCardProps) {
       router.push(`/dashboard/forms/${data.newFormId}/edit`)
     } catch (err: any) {
       console.error("Duplicate form error:", err)
-      alert(err.message || "Failed to duplicate form")
+      setCardError(err.message || "Failed to duplicate form")
     } finally {
       setIsDuplicating(false)
     }
@@ -100,7 +105,19 @@ export function FormCard({ form }: FormCardProps) {
 
   return (
     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-      <Card className="flex flex-col justify-between border-border transition-all duration-200 hover:border-primary/50 hover:shadow-md group">
+      <Card className="flex flex-col justify-between border-border transition-all duration-200 hover:border-primary/50 hover:shadow-md group relative">
+        {cardError && (
+          <div className="absolute top-2 left-2 right-2 z-10 p-2 bg-destructive/15 border border-destructive/30 rounded-md text-destructive text-xs flex items-center gap-1.5 font-medium">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            <span className="flex-1 truncate">{cardError}</span>
+            <button
+              onClick={() => setCardError(null)}
+              className="text-xs hover:underline font-bold ml-1"
+            >
+              ×
+            </button>
+          </div>
+        )}
         <CardHeader className="space-y-3">
           <CardTitle className="text-xl font-semibold text-foreground truncate group-hover:text-primary transition-colors">
             {formTitle}
@@ -122,7 +139,7 @@ export function FormCard({ form }: FormCardProps) {
             </span>
 
             <span className="text-muted-foreground ml-auto" suppressHydrationWarning>
-              Created {new Date(form.created_at).toLocaleDateString("en-US")}
+              Created {formatDateDDMMYYYY(form.created_at)}
             </span>
           </div>
         </CardHeader>

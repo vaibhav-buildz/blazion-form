@@ -25,6 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Loader2 } from "lucide-react"
 
 export default function ForgotPasswordPage() {
   const supabase = createClient()
@@ -44,7 +45,7 @@ export default function ForgotPasswordPage() {
 
     try {
       await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
       })
     } catch (err) {
       console.error("Reset password error:", err)
@@ -91,7 +92,14 @@ export default function ForgotPasswordPage() {
                 />
 
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Sending link..." : "Send reset link"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending link...
+                    </>
+                  ) : (
+                    "Send reset link"
+                  )}
                 </Button>
               </form>
             </Form>
