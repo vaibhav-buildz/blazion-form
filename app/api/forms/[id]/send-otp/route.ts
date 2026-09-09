@@ -132,9 +132,9 @@ export async function POST(
     `
 
     const resendResult = await resend.emails.send({
-      from: "Blazion Form <onboarding@resend.dev>",
+      from: "FormSetu <onboarding@resend.dev>",
       to: [email],
-      subject: `Your verification code for "${form.title || "Blazion Form"}"`,
+      subject: `Your verification code for "${form.title || "FormSetu"}"`,
       html: htmlBody,
     })
 

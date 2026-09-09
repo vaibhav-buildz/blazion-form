@@ -77,10 +77,10 @@ export function TeamWorkspaceModal() {
 
   React.useEffect(() => {
     try {
-      const savedMembers = localStorage.getItem("blazion_workspace_members")
+      const savedMembers = localStorage.getItem("formsetu_workspace_members")
       if (savedMembers) setMembers(JSON.parse(savedMembers))
 
-      const savedFolders = localStorage.getItem("blazion_workspace_folders")
+      const savedFolders = localStorage.getItem("formsetu_workspace_folders")
       if (savedFolders) setFolders(JSON.parse(savedFolders))
     } catch {}
   }, [])
@@ -88,14 +88,14 @@ export function TeamWorkspaceModal() {
   const saveMembers = (updated: Member[]) => {
     setMembers(updated)
     try {
-      localStorage.setItem("blazion_workspace_members", JSON.stringify(updated))
+      localStorage.setItem("formsetu_workspace_members", JSON.stringify(updated))
     } catch {}
   }
 
   const saveFolders = (updated: SharedFolder[]) => {
     setFolders(updated)
     try {
-      localStorage.setItem("blazion_workspace_folders", JSON.stringify(updated))
+      localStorage.setItem("formsetu_workspace_folders", JSON.stringify(updated))
     } catch {}
   }
 

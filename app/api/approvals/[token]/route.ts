@@ -99,7 +99,7 @@ export async function GET(
           })
 
           await resend.emails.send({
-            from: "Blazion Approvals <onboarding@resend.dev>",
+            from: "FormSetu Approvals <onboarding@resend.dev>",
             to: [nextStage.approverEmail],
             subject: `Action Required: Stage ${nextStage.stage} Approval for "${form?.title}"`,
             html: `

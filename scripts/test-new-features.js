@@ -65,7 +65,7 @@ async function runFeatureTests() {
             "Authorization": "Bearer blz_dev_test_secret_12345"
           },
           body: JSON.stringify({
-            respondent_email: "api-respondent@blazion.com",
+            respondent_email: "api-respondent@formsetu.com",
             answers: {
               name: "API Tester",
               feedback: "Excellent programmatic form submission test!"
@@ -89,7 +89,7 @@ async function runFeatureTests() {
 
         // 5. Test Respondent Portal lookup for the new submission
         console.log("\n[TEST 5] Verifying Respondent Portal reflects the new submission...")
-        const portalLookupRes = await fetch(`${BASE_URL}/api/portal/submissions?email=api-respondent@blazion.com`)
+        const portalLookupRes = await fetch(`${BASE_URL}/api/portal/submissions?email=api-respondent@formsetu.com`)
         const portalLookupJson = await portalLookupRes.json()
         const found = portalLookupJson.submissions?.some(s => s.formId === form.id)
         console.log("[TEST 5 Result]: Found submission in portal =", found)

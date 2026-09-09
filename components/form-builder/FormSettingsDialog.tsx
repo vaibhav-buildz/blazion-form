@@ -426,10 +426,10 @@ export function FormSettingsDialog({
                 <RadioGroupItem value="login" id="verify-login" className="mt-0.5" />
                 <div className="space-y-0.5">
                   <Label htmlFor="verify-login" className="text-sm font-medium cursor-pointer">
-                    Require Blazion login
+                    Require FormSetu login
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Respondent must be logged into a Blazion Form account. Account email is automatically captured and considered verified.
+                    Respondent must be logged into a FormSetu account. Account email is automatically captured and considered verified.
                   </p>
                 </div>
               </div>
@@ -476,7 +476,7 @@ export function FormSettingsDialog({
               <Label className="text-sm font-semibold">Generic Webhook</Label>
             </div>
             <p className="text-xs text-muted-foreground">
-              Blazion Form will send an HTTP POST payload with all answers and metadata to this endpoint whenever a submission occurs.
+              FormSetu will send an HTTP POST payload with all answers and metadata to this endpoint whenever a submission occurs.
             </p>
             <div className="space-y-2">
               <Input
@@ -490,7 +490,7 @@ export function FormSettingsDialog({
                 type="text"
                 value={webhookSecret}
                 onChange={(e) => setWebhookSecret(e.target.value)}
-                placeholder="Optional Secret Token (sent in X-Blazion-Webhook-Secret)"
+                placeholder="Optional Secret Token (sent in X-FormSetu-Webhook-Secret)"
                 className="text-xs"
               />
             </div>

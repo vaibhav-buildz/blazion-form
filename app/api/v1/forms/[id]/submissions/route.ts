@@ -29,7 +29,7 @@ async function authenticateApiKey(req: NextRequest, formId: string) {
     return { error: "Form not found", status: 404 }
   }
 
-  // Developer API key matches either form.settings.api_key or a blazion developer key
+  // Developer API key matches either form.settings.api_key or a formsetu developer key
   const validKey = form.settings?.developer_api_key || `blz_${form.id.slice(0, 12)}`
   if (token !== validKey && !token.startsWith("blz_dev_")) {
     return { error: "Invalid API Key for this form.", status: 403 }
@@ -131,7 +131,7 @@ export async function POST(
           headers: {
             "Content-Type": "application/json",
             ...(authResult.form.settings.webhookSecret
-              ? { "X-Blazion-Webhook-Secret": authResult.form.settings.webhookSecret }
+              ? { "X-FormSetu-Webhook-Secret": authResult.form.settings.webhookSecret }
               : {}),
           },
           body: JSON.stringify({

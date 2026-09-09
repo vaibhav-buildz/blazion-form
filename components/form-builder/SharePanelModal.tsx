@@ -72,7 +72,7 @@ export function SharePanelModal({
 
         setContacts(parsed)
         try {
-          const storageKey = formId ? `blazion_contacts_${formId}` : "blazion_contacts_latest"
+          const storageKey = formId ? `formsetu_contacts_${formId}` : "formsetu_contacts_latest"
           localStorage.setItem(storageKey, JSON.stringify(parsed))
         } catch {}
       },

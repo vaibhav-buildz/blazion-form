@@ -1054,10 +1054,10 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
     } catch (err: any) {
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         try {
-          const queueRaw = localStorage.getItem("blazion_offline_queue")
+          const queueRaw = localStorage.getItem("formsetu_offline_queue")
           const queue = queueRaw ? JSON.parse(queueRaw) : []
           queue.push({ formSlug: form.slug, formId: form.id, payload, timestamp: Date.now() })
-          localStorage.setItem("blazion_offline_queue", JSON.stringify(queue))
+          localStorage.setItem("formsetu_offline_queue", JSON.stringify(queue))
           setWasOfflineSubmission(true)
           setSubmissionsCount((prev) => prev + 1)
           setSubmitted(true)
@@ -1338,7 +1338,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
                 <div className="space-y-1.5">
                   <h3 className="text-xl font-bold text-foreground">Please log in to respond to this form</h3>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                    This form requires respondents to be logged into a Blazion Form account to verify their identity.
+                    This form requires respondents to be logged into a FormSetu account to verify their identity.
                   </p>
                 </div>
             <div className="pt-2">

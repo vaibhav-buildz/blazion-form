@@ -1,4 +1,4 @@
-# Blazion Form — Comprehensive Bug Sweep & Verification Report (`BUGS.md`)
+# FormSetu — Comprehensive Bug Sweep & Verification Report (`BUGS.md`)
 
 *Conducted on: 2026-09-07*  
 *Environment: Windows, Node.js, Next.js 16 App Router, Supabase Postgres, Chromium & MS Edge Playwright*
@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-A full end-to-end bug sweep across the entire Blazion Form application was conducted, covering:
+A full end-to-end bug sweep across the entire FormSetu application was conducted, covering:
 1. **Static Type Safety & Build Validation:** `npx tsc --noEmit` across all App Router routes and components.
 2. **Database Integrity & Schema Alignment:** Column constraints, foreign key cascades, RLS security policies, and timestamp fields.
 3. **Backend API Test Suite:** Developer API v1, Respondent Portal API, AI Form Auditor, AI Smart Field Suggestions, AI Response Summarizer, Analytics Event Tracker.
@@ -220,4 +220,4 @@ All automated and manual tests are currently **passing (100% green)**. All disco
 2. **Third-Party Integrations Pending API Keys:**
    - As instructed, Razorpay, MSG91, DigiLocker, and Hugging Face integrations are excluded. CSV contact bulk uploads and SMS dispatch buttons display standard "Coming Soon" badges until accounts are configured.
 3. **PWA Offline Sync:**
-   - Offline queue utilizes IndexedDB / `blazion_offline_queue` in localStorage. Requests replay sequentially when `window.addEventListener('online')` fires.
+   - Offline queue utilizes IndexedDB / `formsetu_offline_queue` in localStorage. Requests replay sequentially when `window.addEventListener('online')` fires.

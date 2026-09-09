@@ -380,7 +380,7 @@ export async function POST(
           })
 
           const emailResult = await resend.emails.send({
-            from: "Blazion Form <onboarding@resend.dev>",
+            from: "FormSetu <onboarding@resend.dev>",
             to: [ownerEmail],
             subject: `New response to "${form.title || "Untitled Form"}"`,
             html,
@@ -435,7 +435,7 @@ export async function POST(
         })
 
         const respEmailResult = await resend.emails.send({
-          from: "Blazion Form <onboarding@resend.dev>",
+          from: "FormSetu <onboarding@resend.dev>",
           to: [targetRespondentEmail],
           subject: `Your response to "${form.title || "Untitled Form"}" has been recorded`,
           html: respondentHtml,
@@ -494,7 +494,7 @@ export async function POST(
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            ...(form.settings.webhookSecret ? { "X-Blazion-Webhook-Secret": form.settings.webhookSecret } : {}),
+            ...(form.settings.webhookSecret ? { "X-FormSetu-Webhook-Secret": form.settings.webhookSecret } : {}),
           },
           body: JSON.stringify({
             event: "form_response.submitted",
@@ -565,7 +565,7 @@ export async function POST(
           await adminSupabase.from("responses").update({ metadata }).eq("id", response.id)
 
           await resend.emails.send({
-            from: "Blazion Approvals <onboarding@resend.dev>",
+            from: "FormSetu Approvals <onboarding@resend.dev>",
             to: [stage1.approverEmail],
             subject: `Action Required: Stage 1 Approval for "${form.title}"`,
             html: `
