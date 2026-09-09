@@ -1,7 +1,20 @@
 import { GoogleGenAI } from "@google/genai"
 import { z } from "zod"
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+const getAiClient = () => {
+  return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "AIzaSy_dummy_key_for_build" })
+}
+
+const ai = new Proxy({} as GoogleGenAI, {
+  get(_target, prop, receiver) {
+    const client = getAiClient() as any
+    const value = client[prop]
+    if (typeof value === "function") {
+      return value.bind(client)
+    }
+    return value
+  },
+})
 
 export const questionTypeSchema = z.enum([
   "short_text",
