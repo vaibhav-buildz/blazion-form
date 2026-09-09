@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr"
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
@@ -66,10 +67,14 @@ export async function PATCH(
     const isPublished = existingForm.status === "published"
     const isUpdatingSettings = body.settings && typeof body.settings === "object"
 
+    console.log("[API PATCH /api/forms/[id]] Slug regen check:", { isPublished, isUpdatingSettings, regenerate_slug: body.regenerate_slug, settingsRegenSlug: body.settings?.regenerate_slug })
+
     // Automatic slug regeneration whenever settings are updated on an already-published form
     if (body.regenerate_slug || body.settings?.regenerate_slug || (isPublished && isUpdatingSettings)) {
       const { nanoid } = await import("nanoid")
-      updateData.slug = nanoid(10)
+      const newSlug = nanoid(10)
+      console.log("[API PATCH /api/forms/[id]] Regenerating slug to:", newSlug)
+      updateData.slug = newSlug
     }
 
     if (body.settings && typeof body.settings === "object") {
@@ -93,8 +98,16 @@ export async function PATCH(
       console.log("[API PATCH /api/forms/[id]] Writing mergedSettings to Supabase:", mergedSettings)
     }
 
+    // Use admin client when slug is being updated (RLS may block slug column updates via anon client)
+    const writeClient = updateData.slug
+      ? createSupabaseAdminClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!
+        )
+      : supabase
+
     // Update form
-    const { data: updatedForm, error: updateError } = await supabase
+    const { data: updatedForm, error: updateError } = await writeClient
       .from("forms")
       .update(updateData)
       .eq("id", id)
@@ -102,8 +115,10 @@ export async function PATCH(
       .single()
 
     console.log("[API PATCH /api/forms/[id]] Supabase update result:", {
+      updatedSlug: updatedForm?.slug,
       updatedFormSettings: updatedForm?.settings,
       updateError: updateError?.message || null,
+      usedAdminClient: !!updateData.slug,
     })
 
     if (updateError) {

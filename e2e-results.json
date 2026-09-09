@@ -3,7 +3,7 @@
     "test": 1,
     "name": "SETTINGS PERSISTENCE",
     "result": "PASS",
-    "details": "All 4 settings (Date=2026-09-07, Time=18:24, Limit=2, Password=Enabled, Mode=OTP) persisted correctly before and after F5 refresh."
+    "details": "All 4 settings (Date=2026-09-09, Time=10:56, Limit=2, Password=Enabled, Mode=OTP) persisted correctly before and after F5 refresh."
   },
   {
     "test": 2,
@@ -15,7 +15,7 @@
     "test": 3,
     "name": "REPUBLISH URL",
     "result": "PASS",
-    "details": "Old URL (http://localhost:3000/f/5yK5xYWEuR) and New URL (http://localhost:3000/f/nqjua3IEvg) are distinct, and Old URL correctly displays 'Form not found or not published'."
+    "details": "Old URL (http://localhost:3000/f/YCsffOzY9P) and New URL (http://localhost:3000/f/S201CzyKL6) are distinct, and Old URL correctly displays 'Form not found or not published'."
   },
   {
     "test": 4,
@@ -27,7 +27,7 @@
     "test": 5,
     "name": "OTP-MODE VERIFICATION",
     "result": "PASS",
-    "details": "Wrong code (999999) correctly rejected with error. Real code (688333) verified successfully and unlocked the form."
+    "details": "Wrong code (999999) correctly rejected with error. Real code (929387) verified successfully and unlocked the form."
   },
   {
     "test": 6,

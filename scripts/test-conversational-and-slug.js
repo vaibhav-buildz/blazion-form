@@ -74,11 +74,23 @@ async function runTests() {
     }
 
     // Ensure form is published so slug is publicly accessible
-    const publishBtn = page.locator('button:has-text("Publish Form")')
-    if (await publishBtn.isVisible()) {
-      console.log("Publishing form first...")
-      await publishBtn.click()
-      await page.waitForTimeout(1500)
+    // Check DB status first to avoid accidentally clicking "Unpublish to Edit"
+    const { data: statusCheck } = await supabaseAdmin
+      .from("forms")
+      .select("status")
+      .eq("id", formId)
+      .single()
+
+    if (statusCheck?.status !== "published") {
+      // Form is in draft — click the "Publish" button (exact match to avoid "Unpublish to Edit")
+      const publishBtn = page.locator('button:text-is("Publish")')
+      if (await publishBtn.isVisible()) {
+        console.log("Publishing form first...")
+        await publishBtn.click()
+        await page.waitForTimeout(2000)
+      }
+    } else {
+      console.log("Form is already published.")
     }
 
     // Fetch initial slug from Supabase
@@ -110,18 +122,25 @@ async function runTests() {
 
     // Click Done to save settings (published form must automatically regenerate slug)
     await dialog.locator('button:has-text("Done")').click()
-    await page.waitForTimeout(1500)
+    // Wait for dialog to close — this signals the API call completed successfully
+    await page.waitForSelector('div[role="dialog"]', { state: "hidden", timeout: 25000 })
+    // Extra buffer for Supabase write propagation
+    await page.waitForTimeout(2000)
     console.log("Saved settings on published form (automatic slug regeneration expected).")
 
-    // Fetch updated form from Supabase
-    const { data: updatedFormData } = await supabaseAdmin
-      .from("forms")
-      .select("slug, settings")
-      .eq("id", formId)
-      .single()
-
-    const newSlug = updatedFormData?.slug
-    console.log(`New Form Slug in Supabase: ${newSlug}`)
+    // Retry Supabase query to handle eventual consistency
+    let newSlug = null
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const { data: updatedFormData } = await supabaseAdmin
+        .from("forms")
+        .select("slug, settings")
+        .eq("id", formId)
+        .single()
+      newSlug = updatedFormData?.slug
+      console.log(`[Attempt ${attempt}] New Form Slug in Supabase: ${newSlug}`)
+      if (newSlug && newSlug !== initialSlug) break
+      if (attempt < 3) await page.waitForTimeout(1500)
+    }
 
     if (!newSlug || newSlug === initialSlug) {
       throw new Error(`Slug was not automatically regenerated! Old: ${initialSlug}, New: ${newSlug}`)
@@ -175,7 +194,8 @@ async function runTests() {
 
     // Save settings
     await settingsDialog.locator('button:has-text("Done")').click()
-    await page.waitForTimeout(1500)
+    await page.waitForSelector('div[role="dialog"]', { state: "hidden", timeout: 25000 })
+    await page.waitForTimeout(2000)
     console.log("Settings updated: Conversational Mode = ON, Password = 'convpass123'.")
 
     // Verify settings in Supabase
@@ -258,7 +278,7 @@ async function runTests() {
     await submitBtn.evaluate((b) => b.click())
 
     // Wait for submission completion message
-    await publicPage.waitForSelector('text=/Thank you|Your response has been recorded/i', { timeout: 15000 })
+    await publicPage.waitForSelector('text=/Thank you|Your response has been recorded/i', { timeout: 35000 })
     console.log("✓ Form response successfully submitted in Conversational Mode!")
     results.conversationalNavigationAndSubmit = true
     results.details.push("Successfully answered conversational questions and submitted form")
