@@ -528,7 +528,7 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
     const handleOnline = async () => {
       setIsOnline(true)
       try {
-        const queueRaw = localStorage.getItem("blazion_offline_queue")
+        const queueRaw = localStorage.getItem("formsetu_offline_queue")
         if (!queueRaw) return
         const queue = JSON.parse(queueRaw)
         if (Array.isArray(queue) && queue.length > 0) {
@@ -546,9 +546,9 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
             }
           }
           if (remaining.length > 0) {
-            localStorage.setItem("blazion_offline_queue", JSON.stringify(remaining))
+            localStorage.setItem("formsetu_offline_queue", JSON.stringify(remaining))
           } else {
-            localStorage.removeItem("blazion_offline_queue")
+            localStorage.removeItem("formsetu_offline_queue")
           }
         }
       } catch (e) {
@@ -1018,10 +1018,10 @@ export function PublicFormFill({ form, questions, initialResponseCount = 0 }: Pu
 
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       try {
-        const queueRaw = localStorage.getItem("blazion_offline_queue")
+        const queueRaw = localStorage.getItem("formsetu_offline_queue")
         const queue = queueRaw ? JSON.parse(queueRaw) : []
         queue.push({ formSlug: form.slug, formId: form.id, payload, timestamp: Date.now() })
-        localStorage.setItem("blazion_offline_queue", JSON.stringify(queue))
+        localStorage.setItem("formsetu_offline_queue", JSON.stringify(queue))
         setWasOfflineSubmission(true)
         setSubmissionsCount((prev) => prev + 1)
         setSubmitted(true)

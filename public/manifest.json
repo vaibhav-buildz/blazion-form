@@ -1,6 +1,6 @@
 {
-  "name": "Blazion Forms",
-  "short_name": "Blazion",
+  "name": "FormSetu",
+  "short_name": "FormSetu",
   "description": "India-First AI Form Builder with offline response capture",
   "start_url": "/dashboard",
   "display": "standalone",

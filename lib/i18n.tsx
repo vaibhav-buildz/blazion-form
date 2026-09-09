@@ -12,7 +12,7 @@ export const SUPPORTED_LANGUAGES = [
 export const translations = {
   en: {
     // Builder & General
-    app_title: "Blazion Forms",
+    app_title: "FormSetu",
     audit_form: "Audit My Form",
     auditing: "Auditing Form...",
     share_form: "Share",
@@ -78,7 +78,7 @@ export const translations = {
   },
   hi: {
     // Builder & General
-    app_title: "ब्लेज़ियन फॉर्म्स",
+    app_title: "फॉर्मसेतु",
     audit_form: "फॉर्म ऑडिट करें (AI)",
     auditing: "फॉर्म की जांच हो रही है...",
     share_form: "शेयर करें",
@@ -163,7 +163,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("blazion_lang") as Language
+      const saved = localStorage.getItem("formsetu_lang") as Language
       if (saved === "en" || saved === "hi") {
         setLanguageState(saved)
         return
@@ -180,7 +180,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     try {
-      localStorage.setItem("blazion_lang", lang)
+      localStorage.setItem("formsetu_lang", lang)
     } catch {}
   }
 

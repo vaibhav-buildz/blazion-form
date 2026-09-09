@@ -1,6 +1,6 @@
 import crypto from "crypto"
 
-const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || "blazion-approval-secret-key"
+const SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || "formsetu-approval-secret-key"
 
 export interface ApprovalPayload {
   responseId: string

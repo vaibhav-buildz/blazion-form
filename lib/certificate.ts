@@ -102,7 +102,7 @@ export function generateCertificatePdf(data: CertificateData): jsPDF {
   doc.setTextColor(71, 85, 105)
   doc.text("Authorized Signatory", width - 75, height - 35)
   doc.line(width - 75, height - 40, width - 30, height - 40)
-  doc.text("Blazion Verified Issuer", width - 75, height - 42)
+  doc.text("FormSetu Verified Issuer", width - 75, height - 42)
 
   // Certificate ID Footer
   doc.setFontSize(8)

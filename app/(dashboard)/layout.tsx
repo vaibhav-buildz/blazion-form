@@ -28,7 +28,7 @@ export default function DashboardLayout({
   const navContent = (
     <div>
       <div className="mb-8 px-6 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-foreground font-heading">Blazion Form</h1>
+        <h1 className="text-lg font-semibold text-foreground font-heading">FormSetu</h1>
         <Button
           variant="ghost"
           size="icon"
@@ -93,7 +93,7 @@ export default function DashboardLayout({
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <span className="text-sm font-bold font-heading">Blazion Form</span>
+            <span className="text-sm font-bold font-heading">FormSetu</span>
           </div>
         </header>
 

@@ -154,7 +154,7 @@ export default function RespondentPortalPage() {
             href="/"
             className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors self-start sm:self-auto"
           >
-            Back to Blazion Forms <ArrowRight className="w-3.5 h-3.5" />
+            Back to FormSetu <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 

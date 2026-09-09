@@ -72,7 +72,7 @@ export function generateNotificationEmail({
       <td align="center">
         <div style="max-width: 600px; width: 100%; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left;">
           <div style="background-color: #C4622D; padding: 24px 32px;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Blazion Form</h1>
+            <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">FormSetu</h1>
           </div>
           <div style="padding: 32px;">
             <h2 style="margin-top: 0; margin-bottom: 8px; color: #1a202c; font-size: 18px; font-weight: 600;">
@@ -95,7 +95,7 @@ export function generateNotificationEmail({
             </div>
           </div>
           <div style="background-color: #f8f9fa; padding: 16px 32px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7;">
-            Sent via Blazion Form &bull; Notification Email
+            Sent via FormSetu &bull; Notification Email
           </div>
         </div>
       </td>
@@ -144,7 +144,7 @@ export function generateRespondentConfirmationEmail({
       <td align="center">
         <div style="max-width: 600px; width: 100%; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: left;">
           <div style="background-color: #C4622D; padding: 24px 32px;">
-            <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">Blazion Form</h1>
+            <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">FormSetu</h1>
           </div>
           <div style="padding: 32px;">
             <h2 style="margin-top: 0; margin-bottom: 8px; color: #1a202c; font-size: 18px; font-weight: 600;">
@@ -161,7 +161,7 @@ export function generateRespondentConfirmationEmail({
             </div>
           </div>
           <div style="background-color: #f8f9fa; padding: 16px 32px; text-align: center; font-size: 12px; color: #a0aec0; border-top: 1px solid #edf2f7;">
-            Sent via Blazion Form &bull; Submission Confirmation
+            Sent via FormSetu &bull; Submission Confirmation
           </div>
         </div>
       </td>

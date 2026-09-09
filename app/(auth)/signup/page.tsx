@@ -148,7 +148,7 @@ export default function SignupPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Sign up</CardTitle>
           <CardDescription>
-            Create an account to get started with Blazion Form
+            Create an account to get started with FormSetu
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

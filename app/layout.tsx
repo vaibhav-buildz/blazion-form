@@ -15,7 +15,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: 'Blazion Form — India-First AI Form Builder',
+  title: 'FormSetu — India-First AI Form Builder',
   description: 'Build official, branded forms with AI insights, identity branding, regional languages, and seamless integrations.',
   manifest: '/manifest.json',
 };
